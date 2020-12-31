@@ -6,18 +6,21 @@
 using json = nlohmann::json;
 
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
-constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+//constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+constexpr const char *const sxosTittlesPath = "/sxos/tittles";
+constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
 
+static std::string boot2FlagFormat{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
 
 constexpr const char *const descriptions[2][2] = {
     [0] = {
-        [0] = "Off | \uE098",
-        [1] = "Off | \uE0F4",
+        [0] = "关闭 | \uE098",
+        [1] = "关闭 | \uE0F4",
     },
     [1] = {
-        [0] = "On | \uE098",
-        [1] = "On | \uE0F4",
+        [0] = "开启 | \uE098",
+        [1] = "开启 | \uE0F4",
     },
 };
 
@@ -29,8 +32,14 @@ GuiMain::GuiMain() {
     FsDir contentDir;
     std::strcpy(pathBuffer, amsContentsPath);
     rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
-    if (R_FAILED(rc))
-        return;
+    if (R_FAILED(rc)) {
+        std::strcpy(pathBuffer, sxosTittlesPath);
+        rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
+        if (R_FAILED(rc))
+            return;
+    }
+    boot2FlagFormat = std::string(pathBuffer) + boot2FlagPath;
+
     tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
     /* Iterate over contents folder. */
@@ -89,7 +98,7 @@ GuiMain::GuiMain() {
             }
 
             if (click & KEY_Y) {
-                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
+                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
                     fsFsDeleteFile(&this->m_fs, pathBuffer);
@@ -115,7 +124,7 @@ tsl::elm::Element *GuiMain::createUI() {
     tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", VERSION);
 
     if (this->m_sysmoduleListItems.size() == 0) {
-        const char *description = this->m_scanned ? "No sysmodules found!" : "Scan failed!";
+        const char *description = this->m_scanned ? "没有找到sysmodules！" : "检索失败！";
 
         auto *warning = new tsl::elm::CustomDrawer([description](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150", false, 180, 250, 90, renderer->a(0xFFFF));
@@ -125,18 +134,18 @@ tsl::elm::Element *GuiMain::createUI() {
         rootFrame->setContent(warning);
     } else {
         tsl::elm::List *sysmoduleList = new tsl::elm::List();
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Dynamic  |  \uE0E0  Toggle  |  \uE0E3  Toggle auto start", true));
+        sysmoduleList->addItem(new tsl::elm::CategoryHeader("动态  |  \uE0E0  切换  |  \uE0E3  切换为自动启动", true));
         sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE016  These sysmodules can be toggled at any time.", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+            renderer->drawString("\uE016  这些sysmodules可以在任何时候切换。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
         }), 30);
         for (const auto &module : this->m_sysmoduleListItems) {
             if (!module.needReboot)
                 sysmoduleList->addItem(module.listItem);
         }
 
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("Static  |  \uE0E3  Toggle auto start", true));
+        sysmoduleList->addItem(new tsl::elm::CategoryHeader("静态  |  \uE0E3  切换为自动启动", true));
         sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE016  These sysmodules need a reboot to work.", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+            renderer->drawString("\uE016  这些sysmodules需要重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
         }), 30);
         for (const auto &module : this->m_sysmoduleListItems) {
             if (module.needReboot)
@@ -169,7 +178,7 @@ void GuiMain::updateStatus(const SystemModule &module) {
 
 bool GuiMain::hasFlag(const SystemModule &module) {
     FsFile flagFile;
-    std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
+    std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
     Result rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &flagFile);
     if (R_SUCCEEDED(rc)) {
         fsFileClose(&flagFile);
