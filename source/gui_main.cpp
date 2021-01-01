@@ -7,8 +7,9 @@ using json = nlohmann::json;
 
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
 //constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
-constexpr const char *const sxosTittlesPath = "/sxos/tittles";
+constexpr const char *const sxosTittlesPath = "/sxos/titles";
 constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
+constexpr const char *const toolboxJsonPath = "/%s/toolbox.json"
 
 static std::string boot2FlagFormat{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
@@ -39,13 +40,14 @@ GuiMain::GuiMain() {
             return;
     }
     boot2FlagFormat = std::string(pathBuffer) + boot2FlagPath;
+    std::string toolboxJsonFormat = std::string(pathBuffer) + toolboxJsonPath;
 
     tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
     /* Iterate over contents folder. */
     for (const auto &entry : FsDirIterator(contentDir)) {
         FsFile toolboxFile;
-        std::snprintf(pathBuffer, FS_MAX_PATH, "/atmosphere/contents/%s/toolbox.json", entry.name);
+        std::snprintf(pathBuffer, FS_MAX_PATH, toolboxJsonFormat.c_str(), entry.name);
         rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &toolboxFile);
         if (R_FAILED(rc))
             continue;
