@@ -9,7 +9,7 @@ constexpr const char *const amsContentsPath = "/atmosphere/contents";
 //constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
 constexpr const char *const sxosTittlesPath = "/sxos/titles";
 constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
-constexpr const char *const toolboxJsonPath = "/%s/toolbox.json"
+constexpr const char *const toolboxJsonPath = "/%s/toolbox.json";
 
 static std::string boot2FlagFormat{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
