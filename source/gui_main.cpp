@@ -7,7 +7,7 @@ using json = nlohmann::json;
 
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
 //constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
-constexpr const char *const sxosTittlesPath = "/sxos/titles";
+constexpr const char *const sxosTitlesPath = "/sxos/titles";
 constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
 constexpr const char *const toolboxJsonPath = "/%s/toolbox.json";
 
@@ -34,7 +34,7 @@ GuiMain::GuiMain() {
     std::strcpy(pathBuffer, amsContentsPath);
     rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
     if (R_FAILED(rc)) {
-        std::strcpy(pathBuffer, sxosTittlesPath);
+        std::strcpy(pathBuffer, sxosTitlesPath);
         rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
         if (R_FAILED(rc))
             return;
