@@ -2,6 +2,9 @@
 
 #include <list>
 #include <string>
+#include <filesystem>
+#include <iostream>
+#include <fstream>
 #include <tesla.hpp>
 
 struct SystemModule {
@@ -10,10 +13,17 @@ struct SystemModule {
     bool needReboot;
 };
 
+enum class BootDatType {
+    SXOS_BOOT_TYPE,
+    SXGEAR_BOOT_TYPE
+};
+
 class GuiMain : public tsl::Gui {
   private:
     FsFileSystem m_fs;
     std::list<SystemModule> m_sysmoduleListItems;
+    tsl::elm::ListItem *m_listItem1;
+    tsl::elm::ListItem *m_listItem2;
     bool m_scanned;
 
   public:
@@ -27,4 +37,6 @@ class GuiMain : public tsl::Gui {
     void updateStatus(const SystemModule &module);
     bool hasFlag(const SystemModule &module);
     bool isRunning(const SystemModule &module);
+    Result CopyFile(const char *src_path, const char *dest_path);
+    BootDatType m_bootRunning;
 };
