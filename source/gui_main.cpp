@@ -40,32 +40,30 @@ constexpr const char *const bootFileSrcPath[3] = {
 };
 
 GuiMain::GuiMain() {
-    Result rc{};
-    FsFileSystem fs;
-    if (R_FAILED(rc = fsOpenSdCardFileSystem(&fs))) return;
+    Result rc = fsOpenSdCardFileSystem(&this->m_fs);
+    if (R_FAILED(rc))
+        return;
 
     FsDir contentDir;
     std::strcpy(pathBuffer, amsContentsPath);
-    rc = fsFsOpenDirectory(&fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
+    rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
     if (R_FAILED(rc)) {
         std::strcpy(pathBuffer, sxosTitlesPath);
-        rc = fsFsOpenDirectory(&fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
-        if (R_FAILED(rc)) {
-            fsFsClose(&fs);
+        rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
+        if (R_FAILED(rc))
             return;
-        }
     }
+    tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
+
     boot2FlagFormat = std::string(pathBuffer) + boot2FlagPath;
     std::string toolboxJsonFormat = std::string(pathBuffer) + toolboxJsonPath;
-
-    tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
     /* Iterate over contents folder. */
     for (const auto &entry : FsDirIterator(contentDir)) {
         FsFile toolboxFile;
         std::snprintf(pathBuffer, FS_MAX_PATH, toolboxJsonFormat.c_str(), entry.name);
-        rc = fsFsOpenFile(&fs, pathBuffer, FsOpenMode_Read, &toolboxFile);
-        if (R_FAILED(rc)) 
+        rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &toolboxFile);
+        if (R_FAILED(rc))
             continue;
         tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&toolboxFile); });
 
@@ -79,7 +77,7 @@ GuiMain::GuiMain() {
         std::string toolBoxData(size, '\0');
         u64 bytesRead;
         rc = fsFileRead(&toolboxFile, 0, toolBoxData.data(), size, FsReadOption_None, &bytesRead);
-        if (R_FAILED(rc) || bytesRead != static_cast<u64>(size))
+        if (R_FAILED(rc))
             continue;
 
         /* Parse toolbox file data. */
@@ -98,7 +96,7 @@ GuiMain::GuiMain() {
             .needReboot = toolboxFileContent["requires_reboot"],
         };
 
-        module.listItem->setClickListener([this, fs, module](u64 click) -> bool {
+        module.listItem->setClickListener([this, module](u64 click) -> bool {
             if (click & KEY_A && !module.needReboot) {
                 if (this->isRunning(module)) {
                     /* Kill process. */
@@ -119,10 +117,10 @@ GuiMain::GuiMain() {
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
-                    fsFsDeleteFile(const_cast<FsFileSystem*>(&fs), pathBuffer);
+                    fsFsDeleteFile(&this->m_fs, pathBuffer);
                 } else {
                     /* Create boot2 flag file. */
-                    fsFsCreateFile(const_cast<FsFileSystem*>(&fs), pathBuffer, 0, FsCreateOption(0));
+                    fsFsCreateFile(&this->m_fs, pathBuffer, 0, FsCreateOption(0));
                 }
                 return true;
             }
@@ -135,24 +133,54 @@ GuiMain::GuiMain() {
 
     m_bootSize = 0;
 	FsFile bootHandle;
-	if (R_SUCCEEDED(fsFsOpenFile(&fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle))) {
-        if (R_FAILED(fsFileGetSize(&bootHandle, &m_bootSize))) {
-		    fsFileClose(&bootHandle);
-            fsFsClose(&fs);
-		    return;
-	    }
-        fsFileClose(&bootHandle);
-    }
+	if (R_FAILED(fsFsOpenFile(&this->m_fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle)))
+        return;
+    tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&bootHandle); });
 
-    fsFsClose(&fs);
+    if (R_FAILED(fsFileGetSize(&bootHandle, &m_bootSize)))
+		return;
 }
 
 GuiMain::~GuiMain() {
+    fsFsClose(&this->m_fs);
 }
 
 tsl::elm::Element *GuiMain::createUI() {
     tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", VERSION);
+
     tsl::elm::List *sysmoduleList = new tsl::elm::List();
+
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("系统重启和关机  |  \uE0E0 重启  |  \uE0E2 关机", true));
+    sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+        renderer->drawString("\uE016  快速重启或者关闭您的SWITCH。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+    }), 30);
+
+    this->m_powerResetListItem = new tsl::elm::ListItem("重启");
+    this->m_powerResetListItem->setValue("|  \uE0F4");
+    this->m_powerResetListItem->setClickListener([this](u64 click) -> bool {
+        if (click & KEY_A) {
+            bpcInitialize();
+            bpcRebootSystem();
+            bpcExit();
+            return true;
+        }
+        return false;
+    });
+    sysmoduleList->addItem(this->m_powerResetListItem);
+
+    this->m_powerOffListItem = new tsl::elm::ListItem("重启");
+    this->m_powerOffListItem->setValue("|  \uE0F4");
+    this->m_powerOffListItem->setClickListener([this](u64 click) -> bool {
+        if (click & KEY_X) {
+            bpcInitialize();
+            bpcShutdownSystem();
+            bpcExit();
+            return true;
+        }
+        return false;
+    });
+    sysmoduleList->addItem(this->m_powerOffListItem);
+
     if (this->m_sysmoduleListItems.size() == 0) {
         const char *description = this->m_scanned ? "没有找到任何系统模块！" : "检索失败！";
         auto *warning = new tsl::elm::CustomDrawer([description](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
@@ -180,169 +208,130 @@ tsl::elm::Element *GuiMain::createUI() {
         }
     }
 
-    tsl::elm::CategoryHeader *bootCatHeader = new tsl::elm::CategoryHeader("支持系统引导的Boot文件  |  \uE0E0 切换", true);
-    sysmoduleList->addItem(bootCatHeader);
+    this->m_bootCatHeader = new tsl::elm::CategoryHeader("支持系统引导的Boot文件  |  \uE0E0 切换", true);
+    sysmoduleList->addItem(this->m_bootCatHeader);
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
 
-	m_bootRunning = (m_bootSize < 20 * 1024 * 1024) ? BootDatType::SXGEAR_BOOT_TYPE : BootDatType::SXOS_BOOT_TYPE;
+	this->m_bootRunning = (this->m_bootSize < 20 * 1024 * 1024) ? BootDatType::SXGEAR_BOOT_TYPE : BootDatType::SXOS_BOOT_TYPE;
 
-    m_listItem1 = new tsl::elm::ListItem(bootFiledescriptions[0]);
-    m_listItem1->setValue((m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
-    m_listItem1->setClickListener([this, bootCatHeader](u64 click) -> bool {
+    this->m_listItem1 = new tsl::elm::ListItem(bootFiledescriptions[0]);
+    this->m_listItem1->setValue((this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
+    this->m_listItem1->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            if (m_bootRunning == BootDatType::SXOS_BOOT_TYPE) return true;
-            m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
-            const char *path = bootFileSrcPath[0];
-            std::string ret = CopyFile(path, bootFileSrcPath[2]);
-            if (ret != "")
-                bootCatHeader->setText(ret);
+            if (this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) return true;
+            this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
+            Result rc = this->CopyFile(bootFileSrcPath[0], bootFileSrcPath[2]);
+            if (R_FAILED(rc)) {
+                this->m_bootCatHeader->setText(std::string("切换SXOS Boot.dat失败！错误码：") + std::to_string(rc));
+                return false;
+            }
             return true;
         }
         return false;
     });
-    sysmoduleList->addItem(m_listItem1);
+    sysmoduleList->addItem(this->m_listItem1);
 
-	m_listItem2 = new tsl::elm::ListItem(bootFiledescriptions[1]);
-    m_listItem2->setValue((m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
-    m_listItem2->setClickListener([this, bootCatHeader](u64 click) -> bool {
+	this->m_listItem2 = new tsl::elm::ListItem(bootFiledescriptions[1]);
+    this->m_listItem2->setValue((this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
+    this->m_listItem2->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            if (m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) return true;
-            m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
-            const char *path = bootFileSrcPath[1];
-            std::string ret = CopyFile(path, bootFileSrcPath[2]);
-            if (ret != "")
-                bootCatHeader->setText(ret);
+            if (this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) return true;
+            this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
+            Result rc = CopyFile(bootFileSrcPath[1], bootFileSrcPath[2]);
+            if (R_FAILED(rc)) {
+                this->m_bootCatHeader->setText(std::string("切换SXGEAR Boot.dat失败！错误码：") + std::to_string(rc));
+                return false;
+            }
             return true;
         }
         return false;
     });
-    sysmoduleList->addItem(m_listItem2);
+    sysmoduleList->addItem(this->m_listItem2);
 
     sysmoduleList->addItem(new tsl::elm::CategoryHeader("更新hekate配置  |  \uE0E0 切换", true));
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
 
-    tsl::elm::ListItem *opAutoboot = new tsl::elm::ListItem("hekate自启动");
+    this->m_opAutoboot = new tsl::elm::ListItem("hekate自启动");
     simpleIniParser::Ini *hekateIni{};
     simpleIniParser::IniSection *hekateIniSection{};
     simpleIniParser::IniOption *hekateIniOption{};
     hekateIni = simpleIniParser::Ini::parseFile("/bootloader/hekate_ipl.ini");
     if (!hekateIni) {
-        opAutoboot->setValue("INI解析失败");
-        sysmoduleList->addItem(opAutoboot);
+        this->m_opAutoboot->setValue("INI解析失败");
+        sysmoduleList->addItem(this->m_opAutoboot);
         rootFrame->setContent(sysmoduleList);
 		return rootFrame;
     }
     hekateIniSection = hekateIni->findSection("config");
     if (!hekateIniSection) {
-        opAutoboot->setValue("INI中无对应节");
-        sysmoduleList->addItem(opAutoboot);
+        this->m_opAutoboot->setValue("INI中无对应节");
+        sysmoduleList->addItem(this->m_opAutoboot);
         rootFrame->setContent(sysmoduleList);
 		return rootFrame;
     }
     hekateIniOption = hekateIniSection->findFirstOption("autoboot");
     if (!hekateIniOption) {
-        opAutoboot->setValue("INI节无参数");
-        sysmoduleList->addItem(opAutoboot);
+        this->m_opAutoboot->setValue("INI节无参数");
+        sysmoduleList->addItem(this->m_opAutoboot);
         rootFrame->setContent(sysmoduleList);
 		return rootFrame;
     }
 
-    //tsl::elm::ListItem *opAutoboot = new tsl::elm::ListItem(hekateIniOption->key);
-    opAutoboot->setValue(hekateIniOption->value);
-    opAutoboot->setClickListener([this, hekateIni, hekateIniOption, opAutoboot](u64 click) -> bool {
+    this->m_opAutoboot->setValue(hekateIniOption->value);
+    this->m_opAutoboot->setClickListener([this, hekateIni, hekateIniOption](u64 click) -> bool {
         if (click & KEY_A) {
-            opAutoboot->setValue((std::stoul(hekateIniOption->value) == 1) ? "0" : "1");
+            this->m_opAutoboot->setValue((std::stoul(hekateIniOption->value) == 1) ? "0" : "1");
             hekateIniOption->value = (std::stoul(hekateIniOption->value) == 1) ? "0" : "1";
             hekateIni->writeToFile("/bootloader/hekate_ipl.ini");
             return true;
         }
         return false;
     });
-    sysmoduleList->addItem(opAutoboot);
+    sysmoduleList->addItem(this->m_opAutoboot);
 
     rootFrame->setContent(sysmoduleList);
 
     return rootFrame;
 }
 
-std::string GuiMain::CopyFile(const char *src_path, const char *dest_path) {
+Result GuiMain::CopyFile(const char *src_path, const char *dest_path) {
 	Result ret{0};
-    FsFileSystem fs;
-    if (R_FAILED(ret = fsOpenSdCardFileSystem(&fs))) return std::string("fsOpenSdCardFileSystem()失败。错误码：") + std::to_string(ret);
 
-    FsFile src_handle;
-	if (R_FAILED(ret = fsFsOpenFile(&fs, src_path, FsOpenMode_Read, &src_handle))) {
-        fsFsClose(&fs);
-        return std::string("fsFsOpenFile(") + src_path + ")" + " 失败。错误码：" + std::to_string(ret);
-    }
+    FsFile src_handle, dest_handle;
+	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, src_path, FsOpenMode_Read, &src_handle))) return ret;
+    tsl::hlp::ScopeGuard fileGuard1([&] { fsFileClose(&src_handle); });
 
 	s64 size = 0;
-	if (R_FAILED(ret = fsFileGetSize(&src_handle, &size))) {
-		fsFileClose(&src_handle);
-        fsFsClose(&fs);
-		return std::string("fsFileGetSize(") + src_path + ")" + " 失败。错误码：" + std::to_string(ret);
-	}
+	if (R_FAILED(ret = fsFileGetSize(&src_handle, &size))) return ret;
 
-    FsFile dest_handle;
-    if (R_SUCCEEDED(fsFsOpenFile(&fs, dest_path, FsOpenMode_Read, &dest_handle))) {
+    if (R_SUCCEEDED(fsFsOpenFile(&this->m_fs, dest_path, FsOpenMode_Read, &dest_handle))) {
         fsFileClose(&dest_handle);
-        if (R_FAILED(ret = fsFsDeleteFile(&fs, dest_path))) {
-            fsFileClose(&src_handle);
-            fsFileClose(&dest_handle);
-            fsFsClose(&fs);
-		    return std::string("fsFsDeleteFile(") + dest_path + ")" + " 失败。错误码：" + std::to_string(ret);
-        }
-
-	    if (R_FAILED(ret = fsFsCreateFile(&fs, dest_path, size, 0))) {
-            fsFileClose(&src_handle);
-            fsFileClose(&dest_handle);
-            fsFsClose(&fs);
-		    return std::string("fsFsCreateFile(") + dest_path + ")" + " 失败。错误码：" + std::to_string(ret);
-        }
+        if (R_FAILED(ret = fsFsDeleteFile(&this->m_fs, dest_path))) return ret;
+	    if (R_FAILED(ret = fsFsCreateFile(&this->m_fs, dest_path, size, 0))) return ret;
     }
 
-	if (R_FAILED(ret = fsFsOpenFile(&fs, dest_path, FsOpenMode_Write, &dest_handle))) {
-		fsFileClose(&src_handle);
-        fsFsClose(&fs);
-		return std::string("fsFsOpenFile(") + dest_path + ")" + " 失败。错误码：" + std::to_string(ret);
-	}
+	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, dest_path, FsOpenMode_Write, &dest_handle))) return ret;
+    tsl::hlp::ScopeGuard fileGuard2([&] { fsFileClose(&dest_handle); });
 
 	u64 bytes_read = 0;
 	const u64 buf_size = 0x10000;
 	s64 offset = 0;
 	unsigned char *buf = new unsigned char[buf_size];
+    tsl::hlp::ScopeGuard fileGuard3([&] { delete[] buf; });
 	std::string filename = std::filesystem::path(src_path).filename();
 
 	do {
 		std::memset(buf, 0, buf_size);
-
-		if (R_FAILED(ret = fsFileRead(&src_handle, offset, buf, buf_size, FsReadOption_None, &bytes_read))) {
-			delete[] buf;
-			fsFileClose(&src_handle);
-			fsFileClose(&dest_handle);
-            fsFsClose(&fs);
-			return std::string("fsFileRead(") + src_path + ")" + " 失败。错误码：" + std::to_string(ret);
-		}
-
-		if (R_FAILED(ret = fsFileWrite(&dest_handle, offset, buf, bytes_read, FsWriteOption_Flush))) {
-			delete[] buf;
-			fsFileClose(&src_handle);
-			fsFileClose(&dest_handle);
-            fsFsClose(&fs);
-			return std::string("fsFileWrite(") + dest_path + ")" + " 失败。错误码：" + std::to_string(ret);
-		}
+		if (R_FAILED(ret = fsFileRead(&src_handle, offset, buf, buf_size, FsReadOption_None, &bytes_read))) return ret;
+		if (R_FAILED(ret = fsFileWrite(&dest_handle, offset, buf, bytes_read, FsWriteOption_Flush))) return ret;
 		offset += bytes_read;
 	} while(offset < size);
 
-	delete[] buf;
-	fsFileClose(&src_handle);
-	fsFileClose(&dest_handle);
-    fsFsClose(&fs);
-	return "";
+	return ret;
 }
 
 void GuiMain::update() {
@@ -355,8 +344,8 @@ void GuiMain::update() {
         this->updateStatus(module);
     }
 
-    m_listItem1->setValue((m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
-    m_listItem2->setValue((m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
+    this->m_listItem1->setValue((this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
+    this->m_listItem2->setValue((this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
 }
 
 void GuiMain::updateStatus(const SystemModule &module) {
@@ -368,19 +357,13 @@ void GuiMain::updateStatus(const SystemModule &module) {
 }
 
 bool GuiMain::hasFlag(const SystemModule &module) {
-    Result rc{};
-    FsFileSystem fs;
-    if (R_FAILED(rc = fsOpenSdCardFileSystem(&fs))) return false;
-
     FsFile flagFile;
     std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
-    rc = fsFsOpenFile(&fs, pathBuffer, FsOpenMode_Read, &flagFile);
+    Result rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &flagFile);
     if (R_SUCCEEDED(rc)) {
         fsFileClose(&flagFile);
-        fsFsClose(&fs);
         return true;
     } else {
-        fsFsClose(&fs);
         return false;
     }
 }
