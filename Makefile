@@ -42,9 +42,9 @@ APP_VERSION	:=	1.2.1
 
 TARGET		:=	ovlSysmodules
 BUILD		:=	build
-SOURCES		:=	source
+SOURCES		:=	source libs/SimpleIniParser/source/SimpleIniParser
 DATA		:=	data
-INCLUDES	:=	include libs/libtesla/include
+INCLUDES	:=	include libs/libtesla/include libs/SimpleIniParser/include libs/SimpleIniParser/include/SimpleIniParser
 
 ifeq ($(RELEASE),)
 	APP_VERSION	:=	$(APP_VERSION)-$(shell git describe --dirty --always)
@@ -67,14 +67,13 @@ CXXFLAGS	:= $(CFLAGS) -fno-exceptions -std=c++17
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS	:= -lnx
+LIBS	:= -lnx -lSimpleIniParser
 
 #---------------------------------------------------------------------------------
 # list of directories containing libraries, this must be the top level containing
 # include and lib
 #---------------------------------------------------------------------------------
-LIBDIRS	:= $(PORTLIBS) $(LIBNX)
-
+LIBDIRS	:= $(PORTLIBS) $(LIBNX) $(CURDIR)/libs/SimpleIniParser
 
 #---------------------------------------------------------------------------------
 # no real need to edit anything past this point unless you need to add additional
@@ -171,7 +170,8 @@ all: $(BUILD)
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) -C $(CURDIR)/libs/SimpleIniParser
+	@$(MAKE) -C $(BUILD) -f $(CURDIR)/Makefile
 
 #---------------------------------------------------------------------------------
 clean:

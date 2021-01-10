@@ -2,9 +2,6 @@
 
 #include <list>
 #include <string>
-#include <filesystem>
-#include <iostream>
-#include <fstream>
 #include <tesla.hpp>
 
 struct SystemModule {
@@ -20,7 +17,6 @@ enum class BootDatType {
 
 class GuiMain : public tsl::Gui {
   private:
-    FsFileSystem m_fs;
     std::list<SystemModule> m_sysmoduleListItems;
     tsl::elm::ListItem *m_listItem1;
     tsl::elm::ListItem *m_listItem2;
@@ -37,6 +33,7 @@ class GuiMain : public tsl::Gui {
     void updateStatus(const SystemModule &module);
     bool hasFlag(const SystemModule &module);
     bool isRunning(const SystemModule &module);
-    Result CopyFile(const char *src_path, const char *dest_path);
+    std::string CopyFile(const char *src_path, const char *dest_path);
     BootDatType m_bootRunning;
+    s64 m_bootSize;
 };
