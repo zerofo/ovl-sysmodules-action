@@ -40,9 +40,16 @@ constexpr const char *const bootFileSrcPath[3] = {
 };
 
 GuiMain::GuiMain() {
-    Result rc = fsOpenSdCardFileSystem(&this->m_fs);
-    if (R_FAILED(rc))
-        return;
+    Result rc;
+    // Open a service manager session.
+    rc = smInitialize();
+    if (R_FAILED(rc)) return;
+
+    rc = bpcInitialize();
+    if (R_FAILED(rc)) return;
+
+    rc = fsOpenSdCardFileSystem(&this->m_fs);
+    if (R_FAILED(rc)) return;
 
     FsDir contentDir;
     std::strcpy(pathBuffer, amsContentsPath);
@@ -143,6 +150,11 @@ GuiMain::GuiMain() {
 
 GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
+
+    bpcExit();
+
+    // Close the service manager session.
+    smExit();
 }
 
 tsl::elm::Element *GuiMain::createUI() {
@@ -150,7 +162,7 @@ tsl::elm::Element *GuiMain::createUI() {
 
     tsl::elm::List *sysmoduleList = new tsl::elm::List();
 
-    sysmoduleList->addItem(new tsl::elm::CategoryHeader("系统重启和关机  |  \uE0E0 重启  |  \uE0E2 关机", true));
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("SWITCH电源控制  |  \uE0E0  重启和关机", true));
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE016  快速重启或者关闭您的SWITCH。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
@@ -159,22 +171,22 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerResetListItem->setValue("|  \uE0F4");
     this->m_powerResetListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            bpcInitialize();
-            bpcRebootSystem();
-            bpcExit();
+            Result rc = bpcRebootSystem();
+            if (R_FAILED(rc))
+                this->m_powerResetListItem->setText(std::string("bpcRebootSystem failed! rc:" + std::to_string(rc)));
             return true;
         }
         return false;
     });
     sysmoduleList->addItem(this->m_powerResetListItem);
 
-    this->m_powerOffListItem = new tsl::elm::ListItem("重启");
-    this->m_powerOffListItem->setValue("|  \uE0F4");
+    this->m_powerOffListItem = new tsl::elm::ListItem("关机");
+    this->m_powerOffListItem->setValue("|  \uE098");
     this->m_powerOffListItem->setClickListener([this](u64 click) -> bool {
-        if (click & KEY_X) {
-            bpcInitialize();
-            bpcShutdownSystem();
-            bpcExit();
+        if (click & KEY_A) {
+            Result rc = bpcShutdownSystem();
+            if (R_FAILED(rc))
+                this->m_powerOffListItem->setText(std::string("bpcShutdownSystem failed! rc:" + std::to_string(rc)));
             return true;
         }
         return false;
