@@ -42,7 +42,9 @@ constexpr const char *const bootFileSrcPath[3] = {
 GuiMain::GuiMain() {
     Result rc;
     // Open a service manager session.
-    //rc = smInitialize();
+    rc = smInitialize();
+    if (R_FAILED(rc)) return;
+
     rc = spsmInitialize();
     if (R_FAILED(rc)) return;
 
@@ -153,10 +155,10 @@ GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
 
     //bpcExit();
+    spsmExit();
 
     // Close the service manager session.
-    //smExit();
-    spsmExit();
+    smExit();
 }
 
 tsl::elm::Element *GuiMain::createUI() {
