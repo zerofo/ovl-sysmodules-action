@@ -42,11 +42,12 @@ constexpr const char *const bootFileSrcPath[3] = {
 GuiMain::GuiMain() {
     Result rc;
     // Open a service manager session.
-    rc = smInitialize();
+    //rc = smInitialize();
+    rc = spsmInitialize();
     if (R_FAILED(rc)) return;
 
-    rc = bpcInitialize();
-    if (R_FAILED(rc)) return;
+    //rc = bpcInitialize();
+    //if (R_FAILED(rc)) return;
 
     rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc)) return;
@@ -151,10 +152,11 @@ GuiMain::GuiMain() {
 GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
 
-    bpcExit();
+    //bpcExit();
 
     // Close the service manager session.
-    smExit();
+    //smExit();
+    spsmExit();
 }
 
 tsl::elm::Element *GuiMain::createUI() {
@@ -171,7 +173,8 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerResetListItem->setValue("|  \uE0F4");
     this->m_powerResetListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            Result rc = bpcRebootSystem();
+            //Result rc = bpcRebootSystem();
+            Result rc = spsmShutdown(true);
             if (R_FAILED(rc))
                 this->m_powerResetListItem->setText(std::string("bpcRebootSystem failed! rc:" + std::to_string(rc)));
             return true;
@@ -184,7 +187,8 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerOffListItem->setValue("|  \uE098");
     this->m_powerOffListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            Result rc = bpcShutdownSystem();
+            //Result rc = bpcShutdownSystem();
+            Result rc = spsmShutdown(false);
             if (R_FAILED(rc))
                 this->m_powerOffListItem->setText(std::string("bpcShutdownSystem failed! rc:" + std::to_string(rc)));
             return true;
