@@ -14,6 +14,8 @@ constexpr const char *const sxosTitlesPath = "/sxos/titles";
 constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
 constexpr const char *const toolboxJsonPath = "/%s/toolbox.json";
 
+static constexpr u32 ExosphereApiVersionConfigItem = 65000;
+
 static std::string boot2FlagFormat{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
 
@@ -45,24 +47,38 @@ GuiMain::GuiMain() {
     rc = smInitialize();
     if (R_FAILED(rc)) return;
 
-    rc = spsmInitialize();
-    if (R_FAILED(rc)) return;
+    if (R_FAILED(rc = spsmInitialize())) return;
+
+    if (R_FAILED(rc = splInitialize())) return;
 
     //rc = bpcInitialize();
     //if (R_FAILED(rc)) return;
+
+    /* Attempt to get the exosphere version. */
+    u64 version{0};
+    u32 version_micro{0xff};
+    u32 version_minor{0xff};
+    u32 version_major{0xff};
+    if (R_SUCCEEDED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereApiVersionConfigItem), &version))) {
+        version_micro = (version >> 40) & 0xff;
+        version_minor = (version >> 48) & 0xff;
+        version_major = (version >> 56) & 0xff;
+    }
+
+    if (version_major == 0 && version_minor == 0 && version_micro == 0)
+        std::strcpy(pathBuffer, sxosTitlesPath);
+    else if (version_major >= 0 && version_minor >= 9 && version_micro >= 0) 
+        std::strcpy(pathBuffer, amsContentsPath);
+    else
+        return;
 
     rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc)) return;
 
     FsDir contentDir;
-    std::strcpy(pathBuffer, amsContentsPath);
     rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
-    if (R_FAILED(rc)) {
-        std::strcpy(pathBuffer, sxosTitlesPath);
-        rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
-        if (R_FAILED(rc))
-            return;
-    }
+    if (R_FAILED(rc)) return;
+
     tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
     boot2FlagFormat = std::string(pathBuffer) + boot2FlagPath;
@@ -154,7 +170,10 @@ GuiMain::GuiMain() {
 GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
 
+    splExit();
+
     //bpcExit();
+
     spsmExit();
 
     // Close the service manager session.
