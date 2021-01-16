@@ -67,7 +67,7 @@ GuiMain::GuiMain() {
 
     if (version_major == 0 && version_minor == 0 && version_micro == 0)
         std::strcpy(pathBuffer, sxosTitlesPath);
-    else if (version_major >= 0 && version_minor >= 9 && version_micro >= 0) 
+    else if (version_major >= 0 && version_minor >= 7 && version_micro >= 0) 
         std::strcpy(pathBuffer, amsContentsPath);
     else
         return;
