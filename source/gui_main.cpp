@@ -47,12 +47,8 @@ GuiMain::GuiMain() {
     // Open a service manager session.
     if (R_FAILED(rc = smInitialize())) return;
 
-    //rc = bpcInitialize();
-    //if (R_FAILED(rc)) return;
-
-    if (R_FAILED(rc = splInitialize())) return;
-
     /* Attempt to get the exosphere version. */
+    if (R_FAILED(rc = splInitialize())) return;
     u64 version{0};
     u32 version_micro{0xff};
     u32 version_minor{0xff};
@@ -178,8 +174,6 @@ GuiMain::GuiMain() {
 GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
 
-    //bpcExit();
-
     // Close the service manager session.
     smExit();
 }
@@ -198,11 +192,12 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerResetListItem->setValue("|  \uE0F4");
     this->m_powerResetListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            //Result rc = bpcRebootSystem();
             Result rc;
+            //if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcRebootSystem()))
             if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(true)))
                 this->m_powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
             spsmExit();
+            //bpcExit();
             return true;
         }
         return false;
@@ -213,11 +208,12 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerOffListItem->setValue("|  \uE098");
     this->m_powerOffListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
-            //Result rc = bpcShutdownSystem();
             Result rc;
+            //if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcShutdownSystem()))
             if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(false)))
                 this->m_powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
             spsmExit();
+            //bpcExit();
             return true;
         }
         return false;
