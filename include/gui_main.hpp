@@ -39,5 +39,5 @@ class GuiMain : public tsl::Gui {
     bool isRunning(const SystemModule &module);
     Result CopyFile(const char *src_path, const char *dest_path);
     BootDatType m_bootRunning;
-    s64 m_bootSize;
+    //s64 m_bootSize;
 };

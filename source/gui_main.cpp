@@ -14,7 +14,8 @@ constexpr const char *const sxosTitlesPath = "/sxos/titles";
 constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
 constexpr const char *const toolboxJsonPath = "/%s/toolbox.json";
 
-static constexpr u32 ExosphereApiVersionConfigItem = 65000;
+static constexpr u32 AMSVersionConfigItem = 65000;
+//static constexpr s64 SXOS_MIN_BOOT_SIZE = 10 * 1024 * 1024;
 
 static std::string boot2FlagFormat{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
@@ -44,36 +45,52 @@ constexpr const char *const bootFileSrcPath[3] = {
 GuiMain::GuiMain() {
     Result rc;
     // Open a service manager session.
-    rc = smInitialize();
-    if (R_FAILED(rc)) return;
-
-    if (R_FAILED(rc = spsmInitialize())) return;
-
-    if (R_FAILED(rc = splInitialize())) return;
+    if (R_FAILED(rc = smInitialize())) return;
 
     //rc = bpcInitialize();
     //if (R_FAILED(rc)) return;
+
+    if (R_FAILED(rc = splInitialize())) return;
 
     /* Attempt to get the exosphere version. */
     u64 version{0};
     u32 version_micro{0xff};
     u32 version_minor{0xff};
     u32 version_major{0xff};
-    if (R_SUCCEEDED(rc = splGetConfig(static_cast<SplConfigItem>(ExosphereApiVersionConfigItem), &version))) {
+    if (R_SUCCEEDED(rc = splGetConfig(static_cast<SplConfigItem>(AMSVersionConfigItem), &version))) {
         version_micro = (version >> 40) & 0xff;
         version_minor = (version >> 48) & 0xff;
         version_major = (version >> 56) & 0xff;
     }
 
-    if (version_major == 0 && version_minor == 0 && version_micro == 0)
+    if (version_major == 0 && version_minor == 0 && version_micro == 0) {
+        this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
         std::strcpy(pathBuffer, sxosTitlesPath);
-    else if (version_major >= 0 && version_minor >= 7 && version_micro >= 0) 
+    } else if (version_major >= 0 && version_minor >= 7 && version_micro >= 0) {
+        this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
         std::strcpy(pathBuffer, amsContentsPath);
-    else
+    } else
         return;
+
+    splExit();
 
     rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc)) return;
+
+#if 0
+    this->m_bootSize = 0;
+	FsFile bootHandle;
+	if (R_FAILED(fsFsOpenFile(&this->m_fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle))) return;
+    tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&bootHandle); });
+    if (R_FAILED(fsFileGetSize(&bootHandle, &m_bootSize))) return;
+    if (this->m_bootSize < SXOS_MIN_BOOT_SIZE) {
+        this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
+        std::strcpy(pathBuffer, amsContentsPath);
+    } else {
+        this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
+        std::strcpy(pathBuffer, sxosTitlesPath);
+    }
+#endif
 
     FsDir contentDir;
     rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
@@ -156,25 +173,12 @@ GuiMain::GuiMain() {
         this->m_sysmoduleListItems.push_back(std::move(module));
     }
     this->m_scanned = true;
-
-    m_bootSize = 0;
-	FsFile bootHandle;
-	if (R_FAILED(fsFsOpenFile(&this->m_fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle)))
-        return;
-    tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&bootHandle); });
-
-    if (R_FAILED(fsFileGetSize(&bootHandle, &m_bootSize)))
-		return;
 }
 
 GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
 
-    splExit();
-
     //bpcExit();
-
-    spsmExit();
 
     // Close the service manager session.
     smExit();
@@ -195,9 +199,10 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerResetListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
             //Result rc = bpcRebootSystem();
-            Result rc = spsmShutdown(true);
-            if (R_FAILED(rc))
-                this->m_powerResetListItem->setText(std::string("bpcRebootSystem failed! rc:" + std::to_string(rc)));
+            Result rc;
+            if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(true)))
+                this->m_powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
+            spsmExit();
             return true;
         }
         return false;
@@ -209,9 +214,10 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_powerOffListItem->setClickListener([this](u64 click) -> bool {
         if (click & KEY_A) {
             //Result rc = bpcShutdownSystem();
-            Result rc = spsmShutdown(false);
-            if (R_FAILED(rc))
-                this->m_powerOffListItem->setText(std::string("bpcShutdownSystem failed! rc:" + std::to_string(rc)));
+            Result rc;
+            if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(false)))
+                this->m_powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
+            spsmExit();
             return true;
         }
         return false;
@@ -250,8 +256,6 @@ tsl::elm::Element *GuiMain::createUI() {
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
-
-	this->m_bootRunning = (this->m_bootSize < 20 * 1024 * 1024) ? BootDatType::SXGEAR_BOOT_TYPE : BootDatType::SXOS_BOOT_TYPE;
 
     this->m_listItem1 = new tsl::elm::ListItem(bootFiledescriptions[0]);
     this->m_listItem1->setValue((this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
