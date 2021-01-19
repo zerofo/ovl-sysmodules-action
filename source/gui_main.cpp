@@ -73,6 +73,12 @@ GuiMain::GuiMain() {
     rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc)) return;
 
+    this->m_isTencentVersion = false;
+    if (R_FAILED(rc = setInitialize())) return;
+    if (R_FAILED(rc = setsysInitialize())) return;
+    // Get bool of IsT (isTencent).
+    if (R_FAILED(rc = setsysGetT(&this->m_isTencentVersion))) return;
+
 #if 0
     this->m_bootSize = 0;
 	FsFile bootHandle;
@@ -174,6 +180,9 @@ GuiMain::GuiMain() {
 GuiMain::~GuiMain() {
     fsFsClose(&this->m_fs);
 
+    setsysExit();
+    setExit();
+
     // Close the service manager session.
     smExit();
 }
@@ -188,37 +197,37 @@ tsl::elm::Element *GuiMain::createUI() {
         renderer->drawString("\uE016  快速重启或者关闭您的SWITCH。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
 
-    this->m_powerResetListItem = new tsl::elm::ListItem("重启");
-    this->m_powerResetListItem->setValue("|  \uE0F4");
-    this->m_powerResetListItem->setClickListener([this](u64 click) -> bool {
+    tsl::elm::ListItem *powerResetListItem = new tsl::elm::ListItem("重启");
+    powerResetListItem->setValue("|  \uE0F4");
+    powerResetListItem->setClickListener([this, powerResetListItem](u64 click) -> bool {
         if (click & KEY_A) {
             Result rc;
             //if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcRebootSystem()))
             if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(true)))
-                this->m_powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
+                powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
             spsmExit();
             //bpcExit();
             return true;
         }
         return false;
     });
-    sysmoduleList->addItem(this->m_powerResetListItem);
+    sysmoduleList->addItem(powerResetListItem);
 
-    this->m_powerOffListItem = new tsl::elm::ListItem("关机");
-    this->m_powerOffListItem->setValue("|  \uE098");
-    this->m_powerOffListItem->setClickListener([this](u64 click) -> bool {
+    tsl::elm::ListItem *powerOffListItem = new tsl::elm::ListItem("关机");
+    powerOffListItem->setValue("|  \uE098");
+    powerOffListItem->setClickListener([this, powerOffListItem](u64 click) -> bool {
         if (click & KEY_A) {
             Result rc;
             //if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcShutdownSystem()))
             if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(false)))
-                this->m_powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
+                powerOffListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
             spsmExit();
             //bpcExit();
             return true;
         }
         return false;
     });
-    sysmoduleList->addItem(this->m_powerOffListItem);
+    sysmoduleList->addItem(powerOffListItem);
 
     if (this->m_sysmoduleListItems.size() == 0) {
         const char *description = this->m_scanned ? "没有找到任何系统模块！" : "检索失败！";
@@ -247,21 +256,21 @@ tsl::elm::Element *GuiMain::createUI() {
         }
     }
 
-    this->m_bootCatHeader = new tsl::elm::CategoryHeader("支持系统引导的Boot文件  |  \uE0E0 切换", true);
-    sysmoduleList->addItem(this->m_bootCatHeader);
+    tsl::elm::CategoryHeader *bootCatHeader = new tsl::elm::CategoryHeader("支持系统引导的Boot文件  |  \uE0E0 切换", true);
+    sysmoduleList->addItem(bootCatHeader);
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
         renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
 
     this->m_listItem1 = new tsl::elm::ListItem(bootFiledescriptions[0]);
     this->m_listItem1->setValue((this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
-    this->m_listItem1->setClickListener([this](u64 click) -> bool {
+    this->m_listItem1->setClickListener([this, bootCatHeader](u64 click) -> bool {
         if (click & KEY_A) {
             if (this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) return true;
             this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
             Result rc = this->CopyFile(bootFileSrcPath[0], bootFileSrcPath[2]);
             if (R_FAILED(rc)) {
-                this->m_bootCatHeader->setText(std::string("切换SXOS Boot.dat失败！错误码：") + std::to_string(rc));
+                bootCatHeader->setText(std::string("切换SXOS Boot.dat失败！错误码：") + std::to_string(rc));
                 return false;
             }
             return true;
@@ -272,13 +281,13 @@ tsl::elm::Element *GuiMain::createUI() {
 
 	this->m_listItem2 = new tsl::elm::ListItem(bootFiledescriptions[1]);
     this->m_listItem2->setValue((this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
-    this->m_listItem2->setClickListener([this](u64 click) -> bool {
+    this->m_listItem2->setClickListener([this, bootCatHeader](u64 click) -> bool {
         if (click & KEY_A) {
             if (this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) return true;
             this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
             Result rc = CopyFile(bootFileSrcPath[1], bootFileSrcPath[2]);
             if (R_FAILED(rc)) {
-                this->m_bootCatHeader->setText(std::string("切换SXGEAR Boot.dat失败！错误码：") + std::to_string(rc));
+                bootCatHeader->setText(std::string("切换SXGEAR Boot.dat失败！错误码：") + std::to_string(rc));
                 return false;
             }
             return true;
@@ -292,66 +301,149 @@ tsl::elm::Element *GuiMain::createUI() {
         renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
 
-    this->m_opAutoboot = new tsl::elm::ListItem("hekate自启动");
-    simpleIniParser::Ini *hekateIni{};
-    simpleIniParser::IniSection *hekateIniSection{};
-    simpleIniParser::IniOption *hekateIniOption{};
-    hekateIni = simpleIniParser::Ini::parseFile("/bootloader/hekate_ipl.ini");
-    if (!hekateIni) {
-        this->m_opAutoboot->setValue("INI解析失败");
-        sysmoduleList->addItem(this->m_opAutoboot);
+    tsl::elm::ListItem *opAutoboot = new tsl::elm::ListItem("hekate自启动");
+    Result rc{0};
+    std::string autobootValue{};
+    rc = setGetIniConfig("/bootloader/hekate_ipl.ini", "config", "autoboot", autobootValue);
+    switch (rc)
+	{
+	case 1:
+		opAutoboot->setValue("INI解析失败");
+		break;
+
+	case 2:
+		opAutoboot->setValue("INI中无对应节");
+		break;
+
+	case 3:
+		opAutoboot->setValue("INI节无参数");
+		break;
+
+	default:
+		break;
+	}
+
+    if (rc) {
+        sysmoduleList->addItem(opAutoboot);
         rootFrame->setContent(sysmoduleList);
-		return rootFrame;
-    }
-    hekateIniSection = hekateIni->findSection("config");
-    if (!hekateIniSection) {
-        this->m_opAutoboot->setValue("INI中无对应节");
-        sysmoduleList->addItem(this->m_opAutoboot);
-        rootFrame->setContent(sysmoduleList);
-		return rootFrame;
-    }
-    hekateIniOption = hekateIniSection->findFirstOption("autoboot");
-    if (!hekateIniOption) {
-        this->m_opAutoboot->setValue("INI节无参数");
-        sysmoduleList->addItem(this->m_opAutoboot);
-        rootFrame->setContent(sysmoduleList);
-		return rootFrame;
+        return rootFrame;
     }
 
-    this->m_opAutoboot->setValue(hekateIniOption->value);
-    this->m_opAutoboot->setClickListener([this, hekateIni, hekateIniOption](u64 click) -> bool {
+    opAutoboot->setValue(autobootValue);
+    opAutoboot->setClickListener([this, opAutoboot, &autobootValue](u64 click) -> bool {
         if (click & KEY_A) {
-            this->m_opAutoboot->setValue((std::stoul(hekateIniOption->value) == 1) ? "0" : "1");
-            hekateIniOption->value = (std::stoul(hekateIniOption->value) == 1) ? "0" : "1";
-            hekateIni->writeToFile("/bootloader/hekate_ipl.ini");
+            opAutoboot->setValue((std::stoul(autobootValue) == 1) ? "0" : "1");
+            Result rc{0};
+            std::string autobootSetValue = (std::stoul(autobootValue) == 1) ? "0" : "1";
+            rc = setGetIniConfig("/bootloader/hekate_ipl.ini", "config", "autoboot", autobootSetValue, true);
+            switch (rc)
+            {
+            case 1:
+                opAutoboot->setValue("INI解析失败");
+                break;
+
+            case 2:
+                opAutoboot->setValue("INI中无对应节");
+                break;
+
+            case 3:
+                opAutoboot->setValue("INI节无参数");
+                break;
+
+            case 4:
+                opAutoboot->setValue("INI写入失败");
+                break;
+
+            default:
+                break;
+            }
+
+            if (rc) return false;
             return true;
         }
         return false;
     });
-    sysmoduleList->addItem(this->m_opAutoboot);
+    sysmoduleList->addItem(opAutoboot);
+
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("大陆与国际版本切换  |  \uE0E2 大陆  \uE0E3 国际", true));
+    sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+        renderer->drawString("\uE016  切换后无需洗白，无需初始化，重启同意EULA后即可生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+    }), 30);
+
+    tsl::elm::ListItem *verSwitchItem = new tsl::elm::ListItem("当前版本");
+    verSwitchItem->setValue(this->m_isTencentVersion ? "大陆" : "国际");
+    verSwitchItem->setClickListener([this, verSwitchItem](u64 click) -> bool {
+        Result rc{};
+        if (click & KEY_X) {
+            if (this->m_isTencentVersion) return true;
+            u64 LanguageCode = 0;
+            if (R_FAILED(rc = setsysSetT(true))) {
+                verSwitchItem->setText(std::string("setsysSetT失败！错误码：") + std::to_string(rc));
+                return false;
+            }
+            if (R_FAILED(rc = setsysSetRegionCode(SetRegion_CHN))) {
+                verSwitchItem->setText(std::string("setsysSetRegionCode失败！错误码：") + std::to_string(rc));
+                return false;
+            }
+            verSwitchItem->setValue("大陆");
+            return true;
+        } else if (click & KEY_Y) {
+            if (!this->m_isTencentVersion) return true;
+            if (R_FAILED(rc = setsysSetT(false))) {
+                verSwitchItem->setText(std::string("setsysSetT失败！错误码：") + std::to_string(rc));
+                return false;
+            }
+            if (R_FAILED(rc = setsysSetRegionCode(SetRegion_HTK))) {
+                verSwitchItem->setText(std::string("setsysSetRegionCode失败！错误码：") + std::to_string(rc));
+                return false;
+            }
+            verSwitchItem->setValue("国际");
+            return true;
+        }
+        return false;
+    });
+    sysmoduleList->addItem(verSwitchItem);
 
     rootFrame->setContent(sysmoduleList);
 
     return rootFrame;
 }
 
-Result GuiMain::CopyFile(const char *src_path, const char *dest_path) {
+Result GuiMain::setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption) {
+    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(iniPath);
+    if (!ini) return 1;
+    simpleIniParser::IniSection *section = ini->findSection(iniSection);
+    if (!section) return 2;
+    simpleIniParser::IniOption *option = section->findFirstOption(iniOption);
+    if (!option) return 3;
+
+    if (getOption) {
+        iniValue = option->value;
+    } else {
+        option->value = iniValue;
+        if (!(ini->writeToFile(iniPath))) return 4;
+    }
+
+    return 0;
+}
+
+Result GuiMain::CopyFile(const char *srcPath, const char *destPath) {
 	Result ret{0};
 
     FsFile src_handle, dest_handle;
-	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, src_path, FsOpenMode_Read, &src_handle))) return ret;
+	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, srcPath, FsOpenMode_Read, &src_handle))) return ret;
     tsl::hlp::ScopeGuard fileGuard1([&] { fsFileClose(&src_handle); });
 
 	s64 size = 0;
 	if (R_FAILED(ret = fsFileGetSize(&src_handle, &size))) return ret;
 
-    if (R_SUCCEEDED(fsFsOpenFile(&this->m_fs, dest_path, FsOpenMode_Read, &dest_handle))) {
+    if (R_SUCCEEDED(fsFsOpenFile(&this->m_fs, destPath, FsOpenMode_Read, &dest_handle))) {
         fsFileClose(&dest_handle);
-        if (R_FAILED(ret = fsFsDeleteFile(&this->m_fs, dest_path))) return ret;
-	    if (R_FAILED(ret = fsFsCreateFile(&this->m_fs, dest_path, size, 0))) return ret;
+        if (R_FAILED(ret = fsFsDeleteFile(&this->m_fs, destPath))) return ret;
+	    if (R_FAILED(ret = fsFsCreateFile(&this->m_fs, destPath, size, 0))) return ret;
     }
 
-	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, dest_path, FsOpenMode_Write, &dest_handle))) return ret;
+	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, destPath, FsOpenMode_Write, &dest_handle))) return ret;
     tsl::hlp::ScopeGuard fileGuard2([&] { fsFileClose(&dest_handle); });
 
 	u64 bytes_read = 0;
@@ -359,7 +451,7 @@ Result GuiMain::CopyFile(const char *src_path, const char *dest_path) {
 	s64 offset = 0;
 	unsigned char *buf = new unsigned char[buf_size];
     tsl::hlp::ScopeGuard fileGuard3([&] { delete[] buf; });
-	std::string filename = std::filesystem::path(src_path).filename();
+	std::string filename = std::filesystem::path(srcPath).filename();
 
 	do {
 		std::memset(buf, 0, buf_size);

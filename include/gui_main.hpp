@@ -1,6 +1,7 @@
 #pragma once
 
 #include <list>
+#include <string>
 #include <tesla.hpp>
 
 struct SystemModule {
@@ -17,13 +18,9 @@ enum class BootDatType {
 class GuiMain : public tsl::Gui {
   private:
     FsFileSystem m_fs;
-    tsl::elm::ListItem *m_powerResetListItem;
-    tsl::elm::ListItem *m_powerOffListItem;
     std::list<SystemModule> m_sysmoduleListItems;
-    tsl::elm::CategoryHeader *m_bootCatHeader;
     tsl::elm::ListItem *m_listItem1;
     tsl::elm::ListItem *m_listItem2;
-    tsl::elm::ListItem *m_opAutoboot;
     bool m_scanned;
 
   public:
@@ -37,7 +34,9 @@ class GuiMain : public tsl::Gui {
     void updateStatus(const SystemModule &module);
     bool hasFlag(const SystemModule &module);
     bool isRunning(const SystemModule &module);
-    Result CopyFile(const char *src_path, const char *dest_path);
+    Result CopyFile(const char *srcPath, const char *destPath);
+    Result setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption = true);
     BootDatType m_bootRunning;
+    bool m_isTencentVersion;
     //s64 m_bootSize;
 };
