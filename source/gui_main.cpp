@@ -367,7 +367,7 @@ tsl::elm::Element *GuiMain::createUI() {
 
     sysmoduleList->addItem(new tsl::elm::CategoryHeader("大陆与国际版本切换  |  \uE0E2 大陆  \uE0E3 国际", true));
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        renderer->drawString("\uE016  切换后无需洗白，无需初始化，重启同意EULA后即可生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        renderer->drawString("\uE016  切换后无需洗白和初始化，重启同意EULA即可。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
 
     tsl::elm::ListItem *verSwitchItem = new tsl::elm::ListItem("当前版本");
