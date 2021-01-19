@@ -376,7 +376,6 @@ tsl::elm::Element *GuiMain::createUI() {
         Result rc{};
         if (click & KEY_X) {
             if (this->m_isTencentVersion) return true;
-            u64 LanguageCode = 0;
             if (R_FAILED(rc = setsysSetT(true))) {
                 verSwitchItem->setText(std::string("setsysSetT失败！错误码：") + std::to_string(rc));
                 return false;
