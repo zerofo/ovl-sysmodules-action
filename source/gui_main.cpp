@@ -58,7 +58,6 @@ GuiMain::GuiMain() {
         version_minor = (version >> 48) & 0xff;
         version_major = (version >> 56) & 0xff;
     }
-
     if (version_major == 0 && version_minor == 0 && version_micro == 0) {
         this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
         std::strcpy(pathBuffer, sxosTitlesPath);
@@ -67,17 +66,16 @@ GuiMain::GuiMain() {
         std::strcpy(pathBuffer, amsContentsPath);
     } else
         return;
-
     splExit();
-
-    rc = fsOpenSdCardFileSystem(&this->m_fs);
-    if (R_FAILED(rc)) return;
 
     this->m_isTencentVersion = false;
     if (R_FAILED(rc = setInitialize())) return;
     if (R_FAILED(rc = setsysInitialize())) return;
     // Get bool of IsT (isTencent).
     if (R_FAILED(rc = setsysGetT(&this->m_isTencentVersion))) return;
+
+    rc = fsOpenSdCardFileSystem(&this->m_fs);
+    if (R_FAILED(rc)) return;
 
 #if 0
     this->m_bootSize = 0;
@@ -384,6 +382,7 @@ tsl::elm::Element *GuiMain::createUI() {
                 verSwitchItem->setText(std::string("setsysSetRegionCode失败！错误码：") + std::to_string(rc));
                 return false;
             }
+            this->m_isTencentVersion = true;
             verSwitchItem->setValue("大陆");
             return true;
         } else if (click & KEY_Y) {
@@ -396,6 +395,7 @@ tsl::elm::Element *GuiMain::createUI() {
                 verSwitchItem->setText(std::string("setsysSetRegionCode失败！错误码：") + std::to_string(rc));
                 return false;
             }
+            this->m_isTencentVersion = false;
             verSwitchItem->setValue("国际");
             return true;
         }
