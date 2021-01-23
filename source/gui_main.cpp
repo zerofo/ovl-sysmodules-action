@@ -301,62 +301,59 @@ tsl::elm::Element *GuiMain::createUI() {
 
     tsl::elm::ListItem *opAutoboot = new tsl::elm::ListItem("hekate自启动");
     Result rc{0};
-    std::string autobootValue{};
+    static std::string autobootValue = "-1";
     rc = setGetIniConfig("/bootloader/hekate_ipl.ini", "config", "autoboot", autobootValue);
     switch (rc)
 	{
 	case 1:
 		opAutoboot->setValue("INI解析失败");
 		break;
-
 	case 2:
 		opAutoboot->setValue("INI中无对应节");
 		break;
-
 	case 3:
 		opAutoboot->setValue("INI节无参数");
 		break;
-
 	default:
 		break;
 	}
-
     if (rc) {
         sysmoduleList->addItem(opAutoboot);
         rootFrame->setContent(sysmoduleList);
         return rootFrame;
     }
-
     opAutoboot->setValue(autobootValue);
-    opAutoboot->setClickListener([this, opAutoboot, &autobootValue](u64 click) -> bool {
+    opAutoboot->setClickListener([this, opAutoboot](u64 click) -> bool {
         if (click & KEY_A) {
-            opAutoboot->setValue((std::stoul(autobootValue) == 1) ? "0" : "1");
             Result rc{0};
-            std::string autobootSetValue = (std::stoul(autobootValue) == 1) ? "0" : "1";
-            rc = setGetIniConfig("/bootloader/hekate_ipl.ini", "config", "autoboot", autobootSetValue, true);
+            if (autobootValue == "1")
+                autobootValue = "0";
+            else if (autobootValue == "0")
+                autobootValue = "1";
+            else
+                autobootValue = "-1";
+            opAutoboot->setValue(autobootValue);
+            rc = setGetIniConfig("/bootloader/hekate_ipl.ini", "config", "autoboot", autobootValue, false);
             switch (rc)
             {
             case 1:
                 opAutoboot->setValue("INI解析失败");
                 break;
-
             case 2:
                 opAutoboot->setValue("INI中无对应节");
                 break;
-
             case 3:
                 opAutoboot->setValue("INI节无参数");
                 break;
-
             case 4:
                 opAutoboot->setValue("INI写入失败");
                 break;
-
             default:
                 break;
             }
 
             if (rc) return false;
+
             return true;
         }
         return false;
@@ -409,7 +406,7 @@ tsl::elm::Element *GuiMain::createUI() {
 }
 
 Result GuiMain::setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption) {
-    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(iniPath);
+    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(&this->m_fs, iniPath);
     if (!ini) return 1;
     simpleIniParser::IniSection *section = ini->findSection(iniSection);
     if (!section) return 2;
@@ -420,7 +417,7 @@ Result GuiMain::setGetIniConfig(std::string iniPath, std::string iniSection, std
         iniValue = option->value;
     } else {
         option->value = iniValue;
-        if (!(ini->writeToFile(iniPath))) return 4;
+        if (!(ini->writeToFile(&this->m_fs, iniPath))) return 4;
     }
 
     return 0;
