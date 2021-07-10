@@ -140,7 +140,7 @@ GuiMain::GuiMain() {
         };
 
         module.listItem->setClickListener([this, module](u64 click) -> bool {
-            if (click & KEY_A && !module.needReboot) {
+            if (click & HidNpadButton_A && !module.needReboot) {
                 if (this->isRunning(module)) {
                     /* Kill process. */
                     pmshellTerminateProgram(module.programId);
@@ -156,8 +156,8 @@ GuiMain::GuiMain() {
                 return true;
             }
 
-            if (click & KEY_Y) {
-                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
+            if (click & HidNpadButton_Y) {
+                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
                     fsFsDeleteFile(&this->m_fs, pathBuffer);
