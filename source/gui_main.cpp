@@ -157,7 +157,7 @@ GuiMain::GuiMain() {
             }
 
             if (click & HidNpadButton_Y) {
-                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat, module.programId);
+                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
                     fsFsDeleteFile(&this->m_fs, pathBuffer);
