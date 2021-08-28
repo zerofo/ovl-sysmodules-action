@@ -19,8 +19,9 @@ class GuiMain : public tsl::Gui {
   private:
     FsFileSystem m_fs;
     std::list<SystemModule> m_sysmoduleListItems;
-    tsl::elm::ListItem *m_listItem1;
-    tsl::elm::ListItem *m_listItem2;
+    tsl::elm::ListItem *m_listItemSXOSBootType;
+    tsl::elm::ListItem *m_listItemSXGEARBootType;
+    tsl::elm::ListItem *m_listItemWifiSwitch;
     bool m_scanned;
 
   public:
@@ -36,6 +37,7 @@ class GuiMain : public tsl::Gui {
     bool isRunning(const SystemModule &module);
     Result CopyFile(const char *srcPath, const char *destPath);
     Result setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption = true);
+    Result isWifiOn(bool &isWifiOn);
     BootDatType m_bootRunning;
     bool m_isTencentVersion;
     //s64 m_bootSize;
