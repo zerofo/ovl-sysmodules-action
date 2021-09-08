@@ -57,14 +57,17 @@ using json = nlohmann::json;
 
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
 //constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
+//constexpr const char *const boot2FlagFolder = "/atmosphere/contents/%016lX/flags";
 constexpr const char *const sxosTitlesPath = "/sxos/titles";
-constexpr const char *const boot2FlagPath = "/%016lX/flags/boot2.flag";
+constexpr const char *const boot2FlagFile = "/%016lX/flags/boot2.flag";
+constexpr const char *const boot2FlagsFolder = "/%016lX/flags";
 constexpr const char *const toolboxJsonPath = "/%s/toolbox.json";
 
 static constexpr u32 AMSVersionConfigItem = 65000;
 //static constexpr s64 SXOS_MIN_BOOT_SIZE = 10 * 1024 * 1024;
 
 static std::string boot2FlagFormat{amsContentsPath};
+static std::string boot2FlagFolder{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
 
 constexpr const char *const descriptions[2][2] = {
@@ -148,7 +151,8 @@ GuiMain::GuiMain() {
 
     tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
-    boot2FlagFormat = std::string(pathBuffer) + boot2FlagPath;
+    boot2FlagFormat = std::string(pathBuffer) + boot2FlagFile;
+    boot2FlagFolder = std::string(pathBuffer) + boot2FlagsFolder;
     std::string toolboxJsonFormat = std::string(pathBuffer) + toolboxJsonPath;
 
     /* Iterate over contents folder. */
@@ -207,6 +211,9 @@ GuiMain::GuiMain() {
             }
 
             if (click & HidNpadButton_Y) {
+                /* if the folder "flags" does not exist, it will be created */
+                std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFolder.c_str(), module.programId);
+                fsFsCreateDirectory(&this->m_fs, pathBuffer);
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
