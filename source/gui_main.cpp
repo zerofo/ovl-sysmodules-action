@@ -111,15 +111,16 @@ GuiMain::GuiMain() {
         version_minor = (version >> 48) & 0xff;
         version_major = (version >> 56) & 0xff;
     }
+    splExit();
     if (version_major == 0 && version_minor == 0 && version_micro == 0) {
         this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
         std::strcpy(pathBuffer, sxosTitlesPath);
-    } else if (version_major >= 0 && version_minor >= 7 && version_micro >= 0) {
+    } else if ((version_major == 0 && version_minor >= 9 && version_micro >= 0) || (version_major == 1 && version_minor >= 0 && version_micro >= 0)) {
         this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
         std::strcpy(pathBuffer, amsContentsPath);
-    } else
+    } else {
         return;
-    splExit();
+    }
 
     this->m_isTencentVersion = false;
     if (R_FAILED(rc = setInitialize())) return;
