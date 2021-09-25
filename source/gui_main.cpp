@@ -72,12 +72,12 @@ static char pathBuffer[FS_MAX_PATH];
 
 constexpr const char *const descriptions[2][2] = {
     [0] = {
-        [0] = "Off | \uE098",
-        [1] = "Off | \uE0F4",
+        [0] = "关闭 | \uE098",
+        [1] = "关闭 | \uE0F4",
     },
     [1] = {
-        [0] = "On | \uE098",
-        [1] = "On | \uE0F4",
+        [0] = "开启 | \uE098",
+        [1] = "开启 | \uE0F4",
     },
 };
 
@@ -245,7 +245,7 @@ GuiMain::~GuiMain() {
 }
 
 tsl::elm::Element *GuiMain::createUI() {
-    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("Sysmodules", VERSION);
+    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("系统模块", VERSION);
 
     tsl::elm::List *sysmoduleList = new tsl::elm::List();
 
