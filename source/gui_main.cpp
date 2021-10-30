@@ -164,7 +164,7 @@ GuiMain::GuiMain() {
         if (R_FAILED(rc))
             continue;
         tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&toolboxFile); });
-
+    
         /* Get toolbox file size. */
         s64 size;
         rc = fsFileGetSize(&toolboxFile, &size);
@@ -181,8 +181,7 @@ GuiMain::GuiMain() {
         /* Parse toolbox file data. */
         json toolboxFileContent = json::parse(toolBoxData);
 
-        const std::string &sysmoduleProgramIdString = toolboxFileContent["tid"];
-        u64 sysmoduleProgramId = std::strtoul(sysmoduleProgramIdString.c_str(), nullptr, 16);
+        u64 sysmoduleProgramId = std::strtoul(entry.name, nullptr, 16);
 
         /* Let's not allow Tesla to be killed with this. */
         if (sysmoduleProgramId == 0x420000000007E51AULL)
