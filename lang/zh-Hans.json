@@ -1,0 +1,168 @@
+{
+    "strings": [
+        {
+            "key": "OverlayFrameText",
+            "value": "系统模块"
+        },
+        {
+            "key": "RunAndHasFlagListItemValue",
+            "value": "正在使用 | \uE0F4"
+        },
+        {
+            "key": "RunAndNoFlagListItemValue",
+            "value": "正在使用 | \uE098"
+        },
+        {
+            "key": "NotRunAndHasFlagListItemValue",
+            "value": "未启用 | \uE0F4"
+        },
+        {
+            "key": "NotRunAndNoFlagListItemValue",
+            "value": "未启用 | \uE098"
+        },
+        {
+            "key": "PowerCategoryHeaderText",
+            "value": "SWITCH电源控制  |  \uE0E0  重启和关机"
+        },
+        {
+            "key": "PowerCustomDrawerText",
+            "value": "\uE016  快速重启或者关闭您的SWITCH。"
+        },
+        {
+            "key": "PowerResetListItemKey",
+            "value": "重启"
+        },
+        {
+            "key": "PowerResetListItemValue",
+            "value": "|  \uE0F4"
+        },
+        {
+            "key": "PowerListItemErrorText",
+            "value": "spsmShutdown失败！错误码："
+        },
+        {
+            "key": "PowerOffListItemKey",
+            "value": "关机"
+        },
+        {
+            "key": "PowerOffListItemValue",
+            "value": "|  \uE098"
+        },
+        {
+            "key": "WifiSwitchCategoryHeaderText",
+            "value": "WIFI切换  |  \uE0E0 切换"
+        },
+        {
+            "key": "WifiSwitchCustomDrawerText",
+            "value": "\uE016  快速切换SWITCH WIFI开关。"
+        },
+        {
+            "key": "WifiSwitchListItemKey",
+            "value": "WIFI状态"
+        },
+        {
+            "key": "WifiSwitchStatusCheckErrorListItemText",
+            "value": "检查WIFI状态失败！错误码："
+        },
+        {
+            "key": "WifiSwitchSetErrorListItemext",
+            "value": "nifmSetWirelessCommunicationEnabled失败！错误码："
+        },
+        {
+            "key": "SysmodulesNotFoundScanOKCustomDrawerText",
+            "value": "没有找到任何系统模块！"
+        },
+        {
+            "key": "SysmodulesNotFoundScanNOKCustomDrawerText",
+            "value": "检索失败！"
+        },
+        {
+            "key": "SysmodulesDynamicCategoryHeaderText",
+            "value": "动态  |  \uE0E0 切换  |  \uE0E3 自动启动"
+        },
+        {
+            "key": "SysmodulesDynamicCustomDrawerText",
+            "value": "\uE016  这些系统模块可以任何时候切换。"
+        },
+        {
+            "key": "SysmodulesStaticCategoryHeaderText",
+            "value": "静态  |  \uE0E3 自动启动"
+        },
+        {
+            "key": "SysmodulesStaticCustomDrawerText",
+            "value": "\uE016  这些系统模块需要重启切换。"
+        },
+        {
+            "key": "BootFileSwitchCategoryHeaderText",
+            "value": "支持系统引导的Boot文件  |  \uE0E0 切换"
+        },
+        {
+            "key": "BootFileSwitchCustomDrawerText",
+            "value": "\uE016  切换后重启生效。"
+        },
+        {
+            "key": "BootFileSXOSBootCopyNOKListItemText",
+            "value": "切换SXOS Boot.dat失败！错误码："
+        },
+        {
+            "key": "BootFileSXGEARBootCopyNOKListItemText",
+            "value": "切换SXGEAR Boot.dat失败！错误码："
+        },
+        {
+            "key": "HekateRestartHitCategoryHeaderText",
+            "value": "更新hekate配置  |  \uE0E0 切换"
+        },
+        {
+            "key": "HekateRestartHitCustomDrawerText",
+            "value": "\uE016  切换后重启生效。"
+        },
+        {
+            "key": "HekateAutoRestartHitListItemKey",
+            "value": "hekate启动提示"
+        },
+        {
+            "key": "HekateAutoRestartHitINIParseNOKListItemValue",
+            "value": "INI解析失败"
+        },
+        {
+            "key": "HekateAutoRestartHitININoSectionListItemValue",
+            "value": "INI中无对应节"
+        },
+        {
+            "key": "HekateAutoRestartHitININoParameterListItemValue",
+            "value": "INI节无参数"
+        },
+        {
+            "key": "HekateAutoRestartHitINIWriteNOKListItemValue",
+            "value": "INI写入失败"
+        },
+        {
+            "key": "VersionSwitchCategoryHeaderText",
+            "value": "大陆与国际版本切换  |  \uE0E2 大陆  \uE0E3 国际"
+        },
+        {
+            "key": "VersionSwitchCustomDrawerText",
+            "value": "\uE016  切换后无需洗白和初始化，重启同意EULA即可。"
+        },
+        {
+            "key": "VersionSwitchListItemKey",
+            "value": "当前版本"
+        },
+        {
+            "key": "VersionSwitchMainlandListItemValue",
+            "value": "大陆"
+        },
+        {
+            "key": "VersionSwitchInternationalListItemValue",
+            "value": "国际"
+        },
+        {
+            "key": "VersionSwitchSetTNOKListItemValue",
+            "value": "setsysSetT失败！错误码："
+        },
+        {
+            "key": "VersionSwitchSetRegionCodeNOKListItemValue",
+            "value": "setsysSetRegionCode失败！错误码："
+        }
+    ]
+}

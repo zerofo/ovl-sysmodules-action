@@ -1,0 +1,176 @@
+{
+    "strings": [
+        {
+            "key": "OverlayFrameText",
+            "value": "Sysmodules"
+        },
+        {
+            "key": "RunAndHasFlagListItemValue",
+            "value": "In use | \uE0F4"
+        },
+        {
+            "key": "RunAndNoFlagListItemValue",
+            "value": "In use | \uE098"
+        },
+        {
+            "key": "NotRunAndHasFlagListItemValue",
+            "value": "Not in use | \uE0F4"
+        },
+        {
+            "key": "NotRunAndNoFlagListItemValue",
+            "value": "Not in use | \uE098"
+        },
+        {
+            "key": "PowerCategoryHeaderText",
+            "value": "SWITCH Power Control  |  \uE0E0  Restart and Power off"
+        },
+        {
+            "key": "PowerCustomDrawerText",
+            "value": "\uE016  Quick reset or power off your console."
+        },
+        {
+            "key": "PowerResetListItemKey",
+            "value": "Reset"
+        },
+        {
+            "key": "PowerResetListItemValue",
+            "value": "|  \uE0F4"
+        },
+        {
+            "key": "PowerResetListItemErrorText",
+            "value": "spsmShutdown failed!Error code: "
+        },
+        {
+            "key": "PowerOffListItemKey",
+            "value": "Power off"
+        },
+        {
+            "key": "PowerOffListItemValue",
+            "value": "|  \uE098"
+        },
+        {
+            "key": "PowerOffListItemErrorText",
+            "value": "spsmShutdown failed!Error code: "
+        },
+        {
+            "key": "WifiSwitchCategoryHeaderText",
+            "value": "WIFI toggle  |  \uE0E0 Toggle"
+        },
+        {
+            "key": "WifiSwitchCustomDrawerText",
+            "value": "\uE016  Quick toggle Switch WIFI status."
+        },
+        {
+            "key": "WifiSwitchListItemKey",
+            "value": "WIFI status"
+        },
+        {
+            "key": "WifiSwitchStatusCheckErrorListItemText",
+            "value": "Check WIFI status failed! Error code: "
+        },
+        {
+            "key": "WifiSwitchSetErrorListItemext",
+            "value": "nifmSetWirelessCommunicationEnabled failed! Error code: "
+        },
+        {
+            "key": "WifiSwitchStatusUpdateNOKListItemText",
+            "value": "Update WIFI status failed! Error code: "
+        },
+        {
+            "key": "SysmodulesNotFoundScanOKCustomDrawerText",
+            "value": "No sysmodules found!"
+        },
+        {
+            "key": "SysmodulesNotFoundScanNOKCustomDrawerText",
+            "value": "Scan failed!"
+        },
+        {
+            "key": "SysmodulesDynamicCategoryHeaderText",
+            "value": "Dynamic  |  \uE0E0  Toggle  |  \uE0E3  Toggle auto start"
+        },
+        {
+            "key": "SysmodulesDynamicCustomDrawerText",
+            "value": "\uE016  These sysmodules can be toggled at any time."
+        },
+        {
+            "key": "SysmodulesStaticCategoryHeaderText",
+            "value": "Static  |  \uE0E3  Toggle auto start"
+        },
+        {
+            "key": "SysmodulesStaticCustomDrawerText",
+            "value": "\uE016  These sysmodules need a reboot to work."
+        },
+        {
+            "key": "BootFileSwitchCategoryHeaderText",
+            "value": "Support CFW boot file switch  |  \uE0E0 Toggle"
+        },
+        {
+            "key": "BootFileSwitchCustomDrawerText",
+            "value": "\uE016  Takes effect after console restart."
+        },
+        {
+            "key": "BootFileSXOSBootCopyNOKListItemText",
+            "value": "Select SXOS Boot.dat failed! Error code: "
+        },
+        {
+            "key": "BootFileSXGEARBootCopyNOKListItemText",
+            "value": "Select SXGEAR Boot.dat failed! Error code: "
+        },
+        {
+            "key": "HekateRestartHitCategoryHeaderText",
+            "value": "Update hekate setting  |  \uE0E0 Toggle"
+        },
+        {
+            "key": "HekateRestartHitCustomDrawerText",
+            "value": "\uE016  Takes effect after toggle and console restart."
+        },
+        {
+            "key": "HekateAutoRestartHitListItemKey",
+            "value": "Hekate restart without hit"
+        },
+        {
+            "key": "HekateAutoRestartHitINIParseNOKListItemValue",
+            "value": "INI parse failed"
+        },
+        {
+            "key": "HekateAutoRestartHitININoSectionListItemValue",
+            "value": "INI no such section"
+        },
+        {
+            "key": "HekateAutoRestartHitININoParameterListItemValue",
+            "value": "INI no such parameter"
+        },
+        {
+            "key": "HekateAutoRestartHitINIWriteNOKListItemValue",
+            "value": "INI write failed"
+        },
+        {
+            "key": "VersionSwitchCategoryHeaderText",
+            "value": "Mainland and international version switching  |  \uE0E2 Mainland  \uE0E3 international"
+        },
+        {
+            "key": "VersionSwitchCustomDrawerText",
+            "value": "\uE016  No need to wash white and initialize after switch. Just need restart and agree to the EULA"
+        },
+        {
+            "key": "VersionSwitchListItemKey",
+            "value": "Current version"
+        },
+        {
+            "key": "VersionSwitchMainlandListItemValue",
+            "value": "Mainland"
+        },
+        {
+            "key": "VersionSwitchInternationalListItemValue",
+            "value": "International"
+        },
+        {
+            "key": "VersionSwitchSetTNOKListItemValue",
+            "value": "setsysSetT failed, Error code: "
+        },
+        {
+            "key": "VersionSwitchSetRegionCodeNOKListItemValue",
+            "value": "setsysSetRegionCode failed, Error code: "
+        }
+    ]
+}

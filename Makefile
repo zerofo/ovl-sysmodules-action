@@ -60,9 +60,9 @@ ARCH	:=	-march=armv8-a+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 CFLAGS	:=	-g -Wall -O2 -ffunction-sections \
 			$(ARCH) $(DEFINES)
 
-CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DVERSION=\"v$(APP_VERSION)\"
+CFLAGS	+=	$(INCLUDE) -D__SWITCH__ -DAPPTITLE=\"$(APP_TITLE)\" -DVERSION=\"v$(APP_VERSION)\"
 
-CXXFLAGS	:= $(CFLAGS) -fno-exceptions -std=c++17
+CXXFLAGS	:= $(CFLAGS) -fexceptions -std=c++20
 
 ASFLAGS	:=	-g $(ARCH)
 LDFLAGS	=	-specs=$(DEVKITPRO)/libnx/switch.specs -g $(ARCH) -Wl,-Map,$(notdir $*.map)
@@ -172,10 +172,14 @@ $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
 	@$(MAKE) --no-print-directory -C $(CURDIR)/libs/SimpleIniParser
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@rm -rf $(CURDIR)/SdOut
+	@mkdir -p $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)
+	@cp -r $(TARGET).ovl $(CURDIR)/SdOut/switch/.overlays/
+	@cp -r $(CURDIR)/lang/* $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)/
 
 #---------------------------------------------------------------------------------
 clean:
-	@rm -fr $(BUILD) $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
+	@rm -fr $(BUILD) $(CURDIR)/SdOut $(TARGET).ovl $(TARGET).nro $(TARGET).nacp $(TARGET).elf
 
 
 #---------------------------------------------------------------------------------

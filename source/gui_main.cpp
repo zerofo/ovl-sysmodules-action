@@ -1,9 +1,7 @@
 #include "gui_main.hpp"
-
 #include "dir_iterator.hpp"
 
 #include <SimpleIniParser.hpp>
-#include <json.hpp>
 #include <filesystem>
 
 /* Below copy from rexshao's source code
@@ -54,6 +52,7 @@
 */
 
 using json = nlohmann::json;
+using namespace tsl;
 
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
 //constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
@@ -70,17 +69,6 @@ static std::string boot2FlagFormat{amsContentsPath};
 static std::string boot2FlagFolder{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
 
-constexpr const char *const descriptions[2][2] = {
-    [0] = {
-        [0] = "关闭 | \uE098",
-        [1] = "关闭 | \uE0F4",
-    },
-    [1] = {
-        [0] = "开启 | \uE098",
-        [1] = "开启 | \uE0F4",
-    },
-};
-
 constexpr const char *const bootFiledescriptions[2] = {
         [0] = "SXOS boot.dat",
         [1] = "SXGEAR boot.dat"
@@ -94,6 +82,7 @@ constexpr const char *const bootFileSrcPath[3] = {
 
 GuiMain::GuiMain() {
     Result rc;
+
     // Open a service manager session.
     if (R_FAILED(rc = smInitialize())) return;
 
@@ -127,6 +116,9 @@ GuiMain::GuiMain() {
     if (R_FAILED(rc = setsysInitialize())) return;
     // Get bool of IsT (isTencent).
     if (R_FAILED(rc = setsysGetT(&this->m_isTencentVersion))) return;
+
+    std::string lanPath = std::string("sdmc:/switch/.overlays/lang/") + APPTITLE + "/";
+    tsl::tr::InitTrans(lanPath);
 
     rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc)) return;
@@ -244,22 +236,22 @@ GuiMain::~GuiMain() {
 }
 
 tsl::elm::Element *GuiMain::createUI() {
-    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("系统模块", VERSION);
+    tsl::elm::OverlayFrame *rootFrame = new tsl::elm::OverlayFrame("OverlayFrameText"_tr, VERSION);
 
     tsl::elm::List *sysmoduleList = new tsl::elm::List();
 
-    sysmoduleList->addItem(new tsl::elm::CategoryHeader("SWITCH电源控制  |  \uE0E0  重启和关机", true));
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("PowerCategoryHeaderText"_tr, true));
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        renderer->drawString("\uE016  快速重启或者关闭您的SWITCH。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        renderer->drawString("PowerCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
-    tsl::elm::ListItem *powerResetListItem = new tsl::elm::ListItem("重启");
-    powerResetListItem->setValue("|  \uE0F4");
+    tsl::elm::ListItem *powerResetListItem = new tsl::elm::ListItem("PowerResetListItemKey"_tr);
+    powerResetListItem->setValue("PowerResetListItemValue"_tr);
     powerResetListItem->setClickListener([this, powerResetListItem](u64 click) -> bool {
         if (click & HidNpadButton_A) {
             Result rc;
             //if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcRebootSystem()))
             if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(true)))
-                powerResetListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
+                powerResetListItem->setText("PowerListItemErrorText"_tr + std::to_string(rc));
             spsmExit();
             //bpcExit();
             return true;
@@ -267,14 +259,14 @@ tsl::elm::Element *GuiMain::createUI() {
         return false;
     });
     sysmoduleList->addItem(powerResetListItem);
-    tsl::elm::ListItem *powerOffListItem = new tsl::elm::ListItem("关机");
-    powerOffListItem->setValue("|  \uE098");
+    tsl::elm::ListItem *powerOffListItem = new tsl::elm::ListItem("PowerOffListItemKey"_tr);
+    powerOffListItem->setValue("PowerOffListItemValue"_tr);
     powerOffListItem->setClickListener([this, powerOffListItem](u64 click) -> bool {
         if (click & HidNpadButton_A) {
             Result rc;
             //if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcShutdownSystem()))
             if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc = spsmShutdown(false)))
-                powerOffListItem->setText(std::string("spsmShutdown失败！错误码：" + std::to_string(rc)));
+                powerOffListItem->setText("PowerListItemErrorText"_tr + std::to_string(rc));
             spsmExit();
             //bpcExit();
             return true;
@@ -283,21 +275,21 @@ tsl::elm::Element *GuiMain::createUI() {
     });
     sysmoduleList->addItem(powerOffListItem);
 
-    tsl::elm::CategoryHeader *wifiSwitchCatHeader = new tsl::elm::CategoryHeader("WIFI切换  |  \uE0E0 切换", true);
+    tsl::elm::CategoryHeader *wifiSwitchCatHeader = new tsl::elm::CategoryHeader("WifiSwitchCategoryHeaderText"_tr, true);
     sysmoduleList->addItem(wifiSwitchCatHeader);
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        renderer->drawString("\uE016  快速切换SWITCH WIFI开关。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        renderer->drawString("WifiSwitchCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
-    this->m_listItemWifiSwitch = new tsl::elm::ListItem("WIFI状态");
+    this->m_listItemWifiSwitch = new tsl::elm::ListItem("WifiSwitchListItemKey"_tr);
     this->m_listItemWifiSwitch->setClickListener([this, wifiSwitchCatHeader](u64 click) -> bool {
         if (click == HidNpadButton_A) {
             Result rc;
             bool isWifiOn;
             if (R_FAILED(rc = this->isWifiOn(isWifiOn)))
-                wifiSwitchCatHeader->setText(std::string("检查WIFI状态失败！错误码：" + std::to_string(rc)));
+                wifiSwitchCatHeader->setText("WifiSwitchStatusCheckErrorListItemText"_tr + std::to_string(rc));
             else {
                 if (R_FAILED(rc = nifmSetWirelessCommunicationEnabled(!isWifiOn)))
-                    wifiSwitchCatHeader->setText(std::string("nifmSetWirelessCommunicationEnabled失败！错误码：" + std::to_string(rc)));
+                    wifiSwitchCatHeader->setText("WifiSwitchSetErrorListItemext"_tr + std::to_string(rc));
             }
             if (R_FAILED(rc))
                 return false;
@@ -309,24 +301,24 @@ tsl::elm::Element *GuiMain::createUI() {
     sysmoduleList->addItem(this->m_listItemWifiSwitch);
 
     if (this->m_sysmoduleListItems.size() == 0) {
-        const char *description = this->m_scanned ? "没有找到任何系统模块！" : "检索失败！";
+        std::string description = this->m_scanned ? "SysmodulesNotFoundScanOKCustomDrawerText"_tr : "SysmodulesNotFoundScanNOKCustomDrawerText"_tr;
         auto *warning = new tsl::elm::CustomDrawer([description](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
             renderer->drawString("\uE150", false, 180, 250, 90, renderer->a(0xFFFF));
-            renderer->drawString(description, false, 110, 340, 25, renderer->a(0xFFFF));
+            renderer->drawString(description.c_str(), false, 110, 340, 25, renderer->a(0xFFFF));
         });
         sysmoduleList->addItem(warning);
     } else {
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("动态  |  \uE0E0 切换  |  \uE0E3 自动启动", true));
+        sysmoduleList->addItem(new tsl::elm::CategoryHeader("SysmodulesDynamicCategoryHeaderText"_tr, true));
         sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE016  这些系统模块可以任何时候切换。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+            renderer->drawString("SysmodulesDynamicCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
         }), 30);
         for (const auto &module : this->m_sysmoduleListItems) {
             if (!module.needReboot)
                 sysmoduleList->addItem(module.listItem);
         }
-        sysmoduleList->addItem(new tsl::elm::CategoryHeader("静态  |  \uE0E3 自动启动", true));
+        sysmoduleList->addItem(new tsl::elm::CategoryHeader("SysmodulesStaticCategoryHeaderText"_tr, true));
         sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-            renderer->drawString("\uE016  这些系统模块需要重启切换。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+            renderer->drawString("SysmodulesStaticCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
         }), 30);
         for (const auto &module : this->m_sysmoduleListItems) {
             if (module.needReboot)
@@ -334,10 +326,10 @@ tsl::elm::Element *GuiMain::createUI() {
         }
     }
 
-    tsl::elm::CategoryHeader *bootCatHeader = new tsl::elm::CategoryHeader("支持系统引导的Boot文件  |  \uE0E0 切换", true);
+    tsl::elm::CategoryHeader *bootCatHeader = new tsl::elm::CategoryHeader("BootFileSwitchCategoryHeaderText"_tr, true);
     sysmoduleList->addItem(bootCatHeader);
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        renderer->drawString("BootFileSwitchCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
     this->m_listItemSXOSBootType = new tsl::elm::ListItem(bootFiledescriptions[0]);
     this->m_listItemSXOSBootType->setClickListener([this, bootCatHeader](u64 click) -> bool {
@@ -347,7 +339,7 @@ tsl::elm::Element *GuiMain::createUI() {
             Result rc;
             rc = this->CopyFile(bootFileSrcPath[0], bootFileSrcPath[2]);
             if (R_FAILED(rc)) {
-                bootCatHeader->setText(std::string("切换SXOS Boot.dat失败！错误码：") + std::to_string(rc));
+                bootCatHeader->setText("BootFileSXOSBootCopyNOKListItemText"_tr + std::to_string(rc));
                 return false;
             }
             return true;
@@ -363,7 +355,7 @@ tsl::elm::Element *GuiMain::createUI() {
             Result rc;
             rc = CopyFile(bootFileSrcPath[1], bootFileSrcPath[2]);
             if (R_FAILED(rc)) {
-                bootCatHeader->setText(std::string("切换SXGEAR Boot.dat失败！错误码：") + std::to_string(rc));
+                bootCatHeader->setText("BootFileSXGEARBootCopyNOKListItemText"_tr + std::to_string(rc));
                 return false;
             }
             return true;
@@ -372,23 +364,23 @@ tsl::elm::Element *GuiMain::createUI() {
     });
     sysmoduleList->addItem(this->m_listItemSXGEARBootType);
 
-    sysmoduleList->addItem(new tsl::elm::CategoryHeader("更新hekate配置  |  \uE0E0 切换", true));
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("HekateRestartHitCategoryHeaderText"_tr, true));
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        renderer->drawString("\uE016  切换后重启生效。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        renderer->drawString("HekateRestartHitCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
-    tsl::elm::ListItem *opAutoboot = new tsl::elm::ListItem("hekate自启动");
+    tsl::elm::ListItem *opAutoboot = new tsl::elm::ListItem("HekateAutoRestartHitListItemKey"_tr);
     static std::string autobootValue = "-1";
     Result rc = setGetIniConfig("/bootloader/hekate_ipl.ini", "config", "autoboot", autobootValue);
     switch (rc)
 	{
 	case 1:
-		opAutoboot->setValue("INI解析失败");
+		opAutoboot->setValue("HekateAutoRestartHitINIParseNOKListItemValue"_tr);
 		break;
 	case 2:
-		opAutoboot->setValue("INI中无对应节");
+		opAutoboot->setValue("HekateAutoRestartHitININoSectionListItemValue"_tr);
 		break;
 	case 3:
-		opAutoboot->setValue("INI节无参数");
+		opAutoboot->setValue("HekateAutoRestartHitININoParameterListItemValue"_tr);
 		break;
 	default:
 		break;
@@ -413,16 +405,16 @@ tsl::elm::Element *GuiMain::createUI() {
             switch (rc)
             {
             case 1:
-                opAutoboot->setValue("INI解析失败");
+                opAutoboot->setValue("HekateAutoRestartHitINIParseNOKListItemValue"_tr);
                 break;
             case 2:
-                opAutoboot->setValue("INI中无对应节");
+                opAutoboot->setValue("HekateAutoRestartHitININoSectionListItemValue"_tr);
                 break;
             case 3:
-                opAutoboot->setValue("INI节无参数");
+                opAutoboot->setValue("HekateAutoRestartHitININoParameterListItemValue"_tr);
                 break;
             case 4:
-                opAutoboot->setValue("INI写入失败");
+                opAutoboot->setValue("HekateAutoRestartHitINIWriteNOKListItemValue"_tr);
                 break;
             default:
                 break;
@@ -436,22 +428,22 @@ tsl::elm::Element *GuiMain::createUI() {
     });
     sysmoduleList->addItem(opAutoboot);
 
-    sysmoduleList->addItem(new tsl::elm::CategoryHeader("大陆与国际版本切换  |  \uE0E2 大陆  \uE0E3 国际", true));
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("VersionSwitchCategoryHeaderText"_tr, true));
     sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
-        renderer->drawString("\uE016  切换后无需洗白和初始化，重启同意EULA即可。", false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+        renderer->drawString("VersionSwitchCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
     }), 30);
-    tsl::elm::ListItem *verSwitchItem = new tsl::elm::ListItem("当前版本");
-    verSwitchItem->setValue(this->m_isTencentVersion ? "大陆" : "国际");
+    tsl::elm::ListItem *verSwitchItem = new tsl::elm::ListItem("VersionSwitchListItemKey"_tr);
+    verSwitchItem->setValue(this->m_isTencentVersion ? "VersionSwitchMainlandListItemValue"_tr : "VersionSwitchInternationalListItemValue"_tr);
     verSwitchItem->setClickListener([this, verSwitchItem](u64 click) -> bool {
         Result rc;
         if (click & HidNpadButton_X) {
             if (this->m_isTencentVersion) return true;
             if (R_FAILED(rc = setsysSetT(true))) {
-                verSwitchItem->setText(std::string("setsysSetT失败！错误码：") + std::to_string(rc));
+                verSwitchItem->setText("VersionSwitchSetTNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
             if (R_FAILED(rc = setsysSetRegionCode(SetRegion_CHN))) {
-                verSwitchItem->setText(std::string("setsysSetRegionCode失败！错误码：") + std::to_string(rc));
+                verSwitchItem->setText("VersionSwitchSetRegionCodeNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
             this->m_isTencentVersion = true;
@@ -460,11 +452,11 @@ tsl::elm::Element *GuiMain::createUI() {
         } else if (click & HidNpadButton_Y) {
             if (!this->m_isTencentVersion) return true;
             if (R_FAILED(rc = setsysSetT(false))) {
-                verSwitchItem->setText(std::string("setsysSetT失败！错误码：") + std::to_string(rc));
+                verSwitchItem->setText("VersionSwitchSetTNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
             if (R_FAILED(rc = setsysSetRegionCode(SetRegion_HTK))) {
-                verSwitchItem->setText(std::string("setsysSetRegionCode失败！错误码：") + std::to_string(rc));
+                verSwitchItem->setText("VersionSwitchSetRegionCodeNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
             this->m_isTencentVersion = false;
@@ -544,23 +536,33 @@ void GuiMain::update() {
         this->updateStatus(module);
     }
 
-    this->m_listItemSXOSBootType->setValue((this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
-    this->m_listItemSXGEARBootType->setValue((this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "正在使用 | \uE0F4" : "未启用 | \uE098");
+    this->m_listItemSXOSBootType->setValue((this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) ? "RunAndHasFlagListItemValue"_tr : "NotRunAndNoFlagListItemValue"_tr);
+    this->m_listItemSXGEARBootType->setValue((this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) ? "RunAndHasFlagListItemValue"_tr : "NotRunAndNoFlagListItemValue"_tr);
 
     Result rc;
     bool isWifiOn;
     if (R_FAILED(rc = this->isWifiOn(isWifiOn)))
-        this->m_listItemWifiSwitch->setText(std::string("检查WIFI状态失败！错误码：" + std::to_string(rc)));
+        this->m_listItemWifiSwitch->setText("WifiSwitchStatusCheckErrorListItemText"_tr + std::to_string(rc));
     else
-        this->m_listItemWifiSwitch->setValue(isWifiOn ? "开启 | \uE0F4" : "关闭 | \uE098");
+        this->m_listItemWifiSwitch->setValue(isWifiOn ? "RunAndHasFlagListItemValue"_tr : "NotRunAndNoFlagListItemValue"_tr);
 }
 
 void GuiMain::updateStatus(const SystemModule &module) {
     bool running = this->isRunning(module);
     bool hasFlag = this->hasFlag(module);
 
-    const char *desc = descriptions[running][hasFlag];
-    module.listItem->setValue(desc);
+    const std::string descriptions[2][2] = {
+        [0] = {
+            [0] = "NotRunAndNoFlagListItemValue"_tr,
+            [1] = "NotRunAndHasFlagListItemValue"_tr,
+        },
+        [1] = {
+            [0] = "RunAndNoFlagListItemValue"_tr,
+            [1] = "RunAndHasFlagListItemValue"_tr,
+        },
+    };
+
+    module.listItem->setValue(descriptions[running][hasFlag]);
 }
 
 bool GuiMain::hasFlag(const SystemModule &module) {
