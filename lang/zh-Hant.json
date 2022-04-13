@@ -1,6 +1,10 @@
 {
     "strings": [
         {
+            "key": "PluginName",
+            "value": "系統模塊管理"
+        },
+        {
             "key": "OverlayFrameText",
             "value": "系統模塊"
         },
@@ -163,6 +167,30 @@
         {
             "key": "VersionSwitchSetRegionCodeNOKListItemValue",
             "value": "setsysSetRegionCode失敗！錯誤碼："
+        },
+        {
+            "key": "WlanCountryCodeSwitchCategoryHeaderText",
+            "value": "大陸與日本WLan國家碼切換  |  \uE0E2 大陸  \uE0E3 日本"
+        },
+        {
+            "key": "WlanCountryCodeSwitchCustomDrawerText",
+            "value": "\uE016  建議先備份PRODINFO。切換後，重啟生效。"
+        },
+        {
+            "key": "WlanCountryCodeSwitchListItemKey",
+            "value": "當前WLan國家碼"
+        },
+        {
+            "key": "WlanCountryCodeSwitchMainlandListItemValue",
+            "value": "大陸"
+        },
+        {
+            "key": "WlanCountryCodeSwitchJapanListItemValue",
+            "value": "日本"
+        },
+        {
+            "key": "WlanCountryCodeSwitchSetTNOKListItemValue",
+            "value": "setWLANCountryCode失敗！錯誤碼："
         }
     ]
 }

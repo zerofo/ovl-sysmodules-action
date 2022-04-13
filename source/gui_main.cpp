@@ -3,6 +3,7 @@
 
 #include <SimpleIniParser.hpp>
 #include <filesystem>
+#include <cstring>
 
 /* Below copy from rexshao's source code
 \uE093 ↓ 
@@ -65,6 +66,25 @@ constexpr const char *const toolboxJsonPath = "/%s/toolbox.json";
 static constexpr u32 AMSVersionConfigItem = 65000;
 //static constexpr s64 SXOS_MIN_BOOT_SIZE = 10 * 1024 * 1024;
 
+#if 0
+/* Calibration
+ * This is the raw data stored under the PRODINFO partition.
+ * Offset	Size	Field                       escription
+ * 0x0008	0x04	BodySize                    Total size of calibration data starting at offset 0x40.
+ * 0x0020	0x20	BodyHash                    SHA256 hash calculated over calibration data.
+ * 0x0088	0x180	WlanCountryCodes            Array of WLAN country code strings. Each element is 3 bytes (code + NULL terminator).
+ */
+static constexpr s64 BodySize_OFFSET = 0x0008;
+static constexpr s64 BodyHash_OFFSET = 0x0020;
+static constexpr s64 BodyHash_SIZE = 0x20;
+static constexpr s64 BodyHashBeigin_OFFSET = 0x0040;
+static constexpr s64 WlanCountryCodes_OFFSET = 0x0088;
+static constexpr s64 WlanCountryCode_SIZE = 0x3;
+static constexpr char CHINA_WLAN_COUNTRY_CODE[WlanCountryCode_SIZE] = "S4";
+static constexpr char JAPAN_WLAN_COUNTRY_CODE[WlanCountryCode_SIZE] = "U1";
+static constexpr char JAPAN_WLAN_COUNTRY_CODE1[WlanCountryCode_SIZE] = "R1";
+#endif
+
 static std::string boot2FlagFormat{amsContentsPath};
 static std::string boot2FlagFolder{amsContentsPath};
 static char pathBuffer[FS_MAX_PATH];
@@ -83,11 +103,219 @@ constexpr const char *const bootFileSrcPath[3] = {
 GuiMain::GuiMain() {
     Result rc;
 
+    std::string jsonStr = R"(
+        {
+            "strings": [
+                {
+                    "key": "PluginName",
+                    "value": "ovl-sysmodules"
+                },
+                {
+                    "key": "OverlayFrameText",
+                    "value": "Sysmodules"
+                },
+                {
+                    "key": "RunAndHasFlagListItemValue",
+                    "value": "In use | \uE0F4"
+                },
+                {
+                    "key": "RunAndNoFlagListItemValue",
+                    "value": "In use | \uE098"
+                },
+                {
+                    "key": "NotRunAndHasFlagListItemValue",
+                    "value": "Not in use | \uE0F4"
+                },
+                {
+                    "key": "NotRunAndNoFlagListItemValue",
+                    "value": "Not in use | \uE098"
+                },
+                {
+                    "key": "PowerCategoryHeaderText",
+                    "value": "SWITCH Power Control  |  \uE0E0  Restart and Power off"
+                },
+                {
+                    "key": "PowerCustomDrawerText",
+                    "value": "\uE016  Quick reset or power off your console."
+                },
+                {
+                    "key": "PowerResetListItemKey",
+                    "value": "Reset"
+                },
+                {
+                    "key": "PowerResetListItemValue",
+                    "value": "|  \uE0F4"
+                },
+                {
+                    "key": "PowerResetListItemErrorText",
+                    "value": "spsmShutdown failed!Error code: "
+                },
+                {
+                    "key": "PowerOffListItemKey",
+                    "value": "Power off"
+                },
+                {
+                    "key": "PowerOffListItemValue",
+                    "value": "|  \uE098"
+                },
+                {
+                    "key": "PowerOffListItemErrorText",
+                    "value": "spsmShutdown failed!Error code: "
+                },
+                {
+                    "key": "WifiSwitchCategoryHeaderText",
+                    "value": "WIFI toggle  |  \uE0E0 Toggle"
+                },
+                {
+                    "key": "WifiSwitchCustomDrawerText",
+                    "value": "\uE016  Quick toggle Switch WIFI status."
+                },
+                {
+                    "key": "WifiSwitchListItemKey",
+                    "value": "WIFI status"
+                },
+                {
+                    "key": "WifiSwitchStatusCheckErrorListItemText",
+                    "value": "Check WIFI status failed! Error code: "
+                },
+                {
+                    "key": "WifiSwitchSetErrorListItemext",
+                    "value": "nifmSetWirelessCommunicationEnabled failed! Error code: "
+                },
+                {
+                    "key": "WifiSwitchStatusUpdateNOKListItemText",
+                    "value": "Update WIFI status failed! Error code: "
+                },
+                {
+                    "key": "SysmodulesNotFoundScanOKCustomDrawerText",
+                    "value": "No sysmodules found!"
+                },
+                {
+                    "key": "SysmodulesNotFoundScanNOKCustomDrawerText",
+                    "value": "Scan failed!"
+                },
+                {
+                    "key": "SysmodulesDynamicCategoryHeaderText",
+                    "value": "Dynamic  |  \uE0E0  Toggle  |  \uE0E3  Toggle auto start"
+                },
+                {
+                    "key": "SysmodulesDynamicCustomDrawerText",
+                    "value": "\uE016  These sysmodules can be toggled at any time."
+                },
+                {
+                    "key": "SysmodulesStaticCategoryHeaderText",
+                    "value": "Static  |  \uE0E3  Toggle auto start"
+                },
+                {
+                    "key": "SysmodulesStaticCustomDrawerText",
+                    "value": "\uE016  These sysmodules need a reboot to work."
+                },
+                {
+                    "key": "BootFileSwitchCategoryHeaderText",
+                    "value": "Support CFW boot file switch  |  \uE0E0 Toggle"
+                },
+                {
+                    "key": "BootFileSwitchCustomDrawerText",
+                    "value": "\uE016  Takes effect after console restart."
+                },
+                {
+                    "key": "BootFileSXOSBootCopyNOKListItemText",
+                    "value": "Select SXOS Boot.dat failed! Error code: "
+                },
+                {
+                    "key": "BootFileSXGEARBootCopyNOKListItemText",
+                    "value": "Select SXGEAR Boot.dat failed! Error code: "
+                },
+                {
+                    "key": "HekateRestartHitCategoryHeaderText",
+                    "value": "Update hekate setting  |  \uE0E0 Toggle"
+                },
+                {
+                    "key": "HekateRestartHitCustomDrawerText",
+                    "value": "\uE016  Takes effect after toggle and console restart."
+                },
+                {
+                    "key": "HekateAutoRestartHitListItemKey",
+                    "value": "Hekate restart without hit"
+                },
+                {
+                    "key": "HekateAutoRestartHitINIParseNOKListItemValue",
+                    "value": "INI parse failed"
+                },
+                {
+                    "key": "HekateAutoRestartHitININoSectionListItemValue",
+                    "value": "INI no such section"
+                },
+                {
+                    "key": "HekateAutoRestartHitININoParameterListItemValue",
+                    "value": "INI no such parameter"
+                },
+                {
+                    "key": "HekateAutoRestartHitINIWriteNOKListItemValue",
+                    "value": "INI write failed"
+                },
+                {
+                    "key": "VersionSwitchCategoryHeaderText",
+                    "value": "Mainland and international version switching  |  \uE0E2 Mainland  \uE0E3 international"
+                },
+                {
+                    "key": "VersionSwitchCustomDrawerText",
+                    "value": "\uE016  No need to wash white and initialize after switch. Just need restart and agree to the EULA"
+                },
+                {
+                    "key": "VersionSwitchListItemKey",
+                    "value": "Current version"
+                },
+                {
+                    "key": "VersionSwitchMainlandListItemValue",
+                    "value": "Mainland"
+                },
+                {
+                    "key": "VersionSwitchInternationalListItemValue",
+                    "value": "International"
+                },
+                {
+                    "key": "VersionSwitchSetTNOKListItemValue",
+                    "value": "setsysSetT failed, Error code: "
+                },
+                {
+                    "key": "VersionSwitchSetRegionCodeNOKListItemValue",
+                    "value": "setsysSetRegionCode failed, Error code: "
+                },
+                {
+                    "key": "WlanCountryCodeSwitchCategoryHeaderText",
+                    "value": "Mainland and Japen WLan country code switching  |  \uE0E2 Mainland  \uE0E3 Japan"
+                },
+                {
+                    "key": "WlanCountryCodeSwitchCustomDrawerText",
+                    "value": "\uE016  Suggest to backup the PRODINFO. Takes effect after restarted."
+                },
+                {
+                    "key": "WlanCountryCodeSwitchListItemKey",
+                    "value": "Current WLan Country Code"
+                },
+                {
+                    "key": "WlanCountryCodeSwitchMainlandListItemValue",
+                    "value": "Mainland"
+                },
+                {
+                    "key": "WlanCountryCodeSwitchJapanListItemValue",
+                    "value": "Japan"
+                },
+                {
+                    "key": "WlanCountryCodeSwitchSetTNOKListItemValue",
+                    "value": "setWLANCountryCode failed! Error Code: "
+                }
+            ]
+        }
+    )";
+    std::string lanPath = std::string("sdmc:/switch/.overlays/lang/") + APPTITLE + "/";
+    tsl::hlp::doWithSmSession([&lanPath, &jsonStr]{
+        tsl::tr::InitTrans(lanPath, jsonStr);
+    });
+
     // Open a service manager session.
     if (R_FAILED(rc = smInitialize())) return;
-
-    // WIFI service
-    if (R_FAILED(rc = nifmInitialize(NifmServiceType_Admin))) return;
 
     /* Attempt to get the exosphere version. */
     if (R_FAILED(rc = splInitialize())) return;
@@ -101,6 +329,7 @@ GuiMain::GuiMain() {
         version_major = (version >> 56) & 0xff;
     }
     splExit();
+
     if (version_major == 0 && version_minor == 0 && version_micro == 0) {
         this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
         std::strcpy(pathBuffer, sxosTitlesPath);
@@ -112,21 +341,24 @@ GuiMain::GuiMain() {
     }
 
     this->m_isTencentVersion = false;
-    if (R_FAILED(rc = setInitialize())) return;
     if (R_FAILED(rc = setsysInitialize())) return;
-    // Get bool of IsT (isTencent).
-    if (R_FAILED(rc = setsysGetT(&this->m_isTencentVersion))) return;
+    if (R_FAILED(rc = setsysGetT(&this->m_isTencentVersion))) {
+        setsysExit();
+        return;
+    }
 
-    std::string lanPath = std::string("sdmc:/switch/.overlays/lang/") + APPTITLE + "/";
-    tsl::tr::InitTrans(lanPath);
+#if 0
+    if (R_FAILED(rc = getWLANCountryCode(this->m_curCountryCode))) return;
+#endif
 
-    rc = fsOpenSdCardFileSystem(&this->m_fs);
-    if (R_FAILED(rc)) return;
+    FsFileSystem fs;
+    if (R_FAILED(rc = fsOpenSdCardFileSystem(&fs))) return;
+    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
 
 #if 0
     this->m_bootSize = 0;
 	FsFile bootHandle;
-	if (R_FAILED(fsFsOpenFile(&this->m_fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle))) return;
+	if (R_FAILED(fsFsOpenFile(&fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle))) return;
     tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&bootHandle); });
     if (R_FAILED(fsFileGetSize(&bootHandle, &m_bootSize))) return;
     if (this->m_bootSize < SXOS_MIN_BOOT_SIZE) {
@@ -139,8 +371,8 @@ GuiMain::GuiMain() {
 #endif
 
     FsDir contentDir;
-    rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir);
-    if (R_FAILED(rc)) return;
+    if (R_FAILED(rc = fsFsOpenDirectory(&fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir)))
+        return;
 
     tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
 
@@ -152,15 +384,13 @@ GuiMain::GuiMain() {
     for (const auto &entry : FsDirIterator(contentDir)) {
         FsFile toolboxFile;
         std::snprintf(pathBuffer, FS_MAX_PATH, toolboxJsonFormat.c_str(), entry.name);
-        rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &toolboxFile);
-        if (R_FAILED(rc))
+        if (R_FAILED(rc = fsFsOpenFile(&fs, pathBuffer, FsOpenMode_Read, &toolboxFile)))
             continue;
         tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&toolboxFile); });
     
         /* Get toolbox file size. */
         s64 size;
-        rc = fsFileGetSize(&toolboxFile, &size);
-        if (R_FAILED(rc))
+        if (R_FAILED(rc = fsFileGetSize(&toolboxFile, &size)))
             continue;
 
         /* Read toolbox file. */
@@ -203,17 +433,20 @@ GuiMain::GuiMain() {
             }
 
             if (click & HidNpadButton_Y) {
+                FsFileSystem fs;
+                if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return false;
                 /* if the folder "flags" does not exist, it will be created */
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFolder.c_str(), module.programId);
-                fsFsCreateDirectory(&this->m_fs, pathBuffer);
+                fsFsCreateDirectory(&fs, pathBuffer);
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
-                    fsFsDeleteFile(&this->m_fs, pathBuffer);
+                    fsFsDeleteFile(&fs, pathBuffer);
                 } else {
                     /* Create boot2 flag file. */
-                    fsFsCreateFile(&this->m_fs, pathBuffer, 0, FsCreateOption(0));
+                    fsFsCreateFile(&fs, pathBuffer, 0, FsCreateOption(0));
                 }
+                fsFsClose(&fs);
                 return true;
             }
 
@@ -225,12 +458,6 @@ GuiMain::GuiMain() {
 }
 
 GuiMain::~GuiMain() {
-    fsFsClose(&this->m_fs);
-
-    setsysExit();
-    setExit();
-
-    nifmExit();
     // Close the service manager session.
     smExit();
 }
@@ -288,8 +515,11 @@ tsl::elm::Element *GuiMain::createUI() {
             if (R_FAILED(rc = this->isWifiOn(isWifiOn)))
                 wifiSwitchCatHeader->setText("WifiSwitchStatusCheckErrorListItemText"_tr + std::to_string(rc));
             else {
-                if (R_FAILED(rc = nifmSetWirelessCommunicationEnabled(!isWifiOn)))
+                if (R_FAILED(rc = nifmInitialize(NifmServiceType_Admin))) return false;
+                if (R_FAILED(rc = nifmSetWirelessCommunicationEnabled(!isWifiOn))) {
                     wifiSwitchCatHeader->setText("WifiSwitchSetErrorListItemext"_tr + std::to_string(rc));
+                    nifmExit();
+                }
             }
             if (R_FAILED(rc))
                 return false;
@@ -438,34 +668,75 @@ tsl::elm::Element *GuiMain::createUI() {
         Result rc;
         if (click & HidNpadButton_X) {
             if (this->m_isTencentVersion) return true;
+            if (R_FAILED(rc = setsysInitialize())) return false;
             if (R_FAILED(rc = setsysSetT(true))) {
+                setsysExit();
                 verSwitchItem->setText("VersionSwitchSetTNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
             if (R_FAILED(rc = setsysSetRegionCode(SetRegion_CHN))) {
+                setsysExit();
                 verSwitchItem->setText("VersionSwitchSetRegionCodeNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
+            setsysExit();
             this->m_isTencentVersion = true;
-            verSwitchItem->setValue("大陆");
+            verSwitchItem->setValue("VersionSwitchMainlandListItemValue"_tr);
             return true;
         } else if (click & HidNpadButton_Y) {
             if (!this->m_isTencentVersion) return true;
+            if (R_FAILED(rc = setsysInitialize())) return false;
             if (R_FAILED(rc = setsysSetT(false))) {
+                setsysExit();
                 verSwitchItem->setText("VersionSwitchSetTNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
             if (R_FAILED(rc = setsysSetRegionCode(SetRegion_HTK))) {
+                setsysExit();
                 verSwitchItem->setText("VersionSwitchSetRegionCodeNOKListItemValue"_tr + std::to_string(rc));
                 return false;
             }
+            setsysExit();
             this->m_isTencentVersion = false;
-            verSwitchItem->setValue("国际");
+            verSwitchItem->setValue("VersionSwitchInternationalListItemValue"_tr);
             return true;
         }
         return false;
     });
     sysmoduleList->addItem(verSwitchItem);
+
+#if 0
+    sysmoduleList->addItem(new tsl::elm::CategoryHeader("WlanCountryCodeSwitchCategoryHeaderText"_tr, true));
+    sysmoduleList->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer *renderer, s32 x, s32 y, s32 w, s32 h) {
+        renderer->drawString("WlanCountryCodeSwitchCustomDrawerText"_tr.c_str(), false, x + 5, y + 20, 15, renderer->a(tsl::style::color::ColorDescription));
+    }), 30);
+    tsl::elm::ListItem *wlanCountryCodeSwitchItem = new tsl::elm::ListItem("WlanCountryCodeSwitchListItemKey"_tr);
+    wlanCountryCodeSwitchItem->setValue((this->m_curCountryCode.compare(CHINA_WLAN_COUNTRY_CODE) == 0) ? "WlanCountryCodeSwitchMainlandListItemValue"_tr : "WlanCountryCodeSwitchJapanListItemValue"_tr);
+    wlanCountryCodeSwitchItem->setClickListener([this, wlanCountryCodeSwitchItem](u64 click) -> bool {
+        Result rc;
+        if (click & HidNpadButton_X) {
+            if (this->m_curCountryCode.compare(CHINA_WLAN_COUNTRY_CODE) == 0) return true;
+            if (R_FAILED(rc = this->setWLANCountryCode(CHINA_WLAN_COUNTRY_CODE))) {
+                wlanCountryCodeSwitchItem->setText("WlanCountryCodeSwitchSetTNOKListItemValue"_tr + std::to_string(rc));
+                return false;
+            }
+            this->m_curCountryCode = CHINA_WLAN_COUNTRY_CODE;
+            wlanCountryCodeSwitchItem->setValue("WlanCountryCodeSwitchMainlandListItemValue"_tr);
+            return true;
+        } else if (click & HidNpadButton_Y) {
+            if (this->m_curCountryCode.compare(JAPAN_WLAN_COUNTRY_CODE) == 0) return true;
+            if (R_FAILED(rc = this->setWLANCountryCode(JAPAN_WLAN_COUNTRY_CODE))) {
+                wlanCountryCodeSwitchItem->setText("WlanCountryCodeSwitchSetTNOKListItemValue"_tr + std::to_string(rc));
+                return false;
+            }
+            this->m_curCountryCode = JAPAN_WLAN_COUNTRY_CODE;
+            wlanCountryCodeSwitchItem->setValue("WlanCountryCodeSwitchJapanListItemValue"_tr);
+            return true;
+        }
+        return false;
+    });
+    sysmoduleList->addItem(wlanCountryCodeSwitchItem);
+#endif
 
     rootFrame->setContent(sysmoduleList);
 
@@ -473,40 +744,47 @@ tsl::elm::Element *GuiMain::createUI() {
 }
 
 Result GuiMain::setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption) {
-    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(&this->m_fs, iniPath);
-    if (!ini) return 1;
+    FsFileSystem fs;
+    if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return 1;
+    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
+
+    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(&fs, iniPath);
+    if (!ini) return 2;
     simpleIniParser::IniSection *section = ini->findSection(iniSection);
-    if (!section) return 2;
+    if (!section) return 3;
     simpleIniParser::IniOption *option = section->findFirstOption(iniOption);
-    if (!option) return 3;
+    if (!option) return 4;
 
     if (getOption) {
         iniValue = option->value;
     } else {
         option->value = iniValue;
-        if (!(ini->writeToFile(&this->m_fs, iniPath))) return 4;
+        if (!(ini->writeToFile(&fs, iniPath))) return 4;
     }
 
     return 0;
 }
 
 Result GuiMain::CopyFile(const char *srcPath, const char *destPath) {
-	Result ret{0};
+	Result rc{0};
+    FsFileSystem fs;
+    if (R_FAILED(rc = fsOpenSdCardFileSystem(&fs))) return rc;
+    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
 
     FsFile src_handle, dest_handle;
-	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, srcPath, FsOpenMode_Read, &src_handle))) return ret;
+	if (R_FAILED(rc = fsFsOpenFile(&fs, srcPath, FsOpenMode_Read, &src_handle))) return rc;
     tsl::hlp::ScopeGuard fileGuard1([&] { fsFileClose(&src_handle); });
 
 	s64 size = 0;
-	if (R_FAILED(ret = fsFileGetSize(&src_handle, &size))) return ret;
+	if (R_FAILED(rc = fsFileGetSize(&src_handle, &size))) return rc;
 
-    if (R_SUCCEEDED(fsFsOpenFile(&this->m_fs, destPath, FsOpenMode_Read, &dest_handle))) {
+    if (R_SUCCEEDED(fsFsOpenFile(&fs, destPath, FsOpenMode_Read, &dest_handle))) {
         fsFileClose(&dest_handle);
-        if (R_FAILED(ret = fsFsDeleteFile(&this->m_fs, destPath))) return ret;
-	    if (R_FAILED(ret = fsFsCreateFile(&this->m_fs, destPath, size, 0))) return ret;
+        if (R_FAILED(rc = fsFsDeleteFile(&fs, destPath))) return rc;
+	    if (R_FAILED(rc = fsFsCreateFile(&fs, destPath, size, 0))) return rc;
     }
 
-	if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, destPath, FsOpenMode_Write, &dest_handle))) return ret;
+	if (R_FAILED(rc = fsFsOpenFile(&fs, destPath, FsOpenMode_Write, &dest_handle))) return rc;
     tsl::hlp::ScopeGuard fileGuard2([&] { fsFileClose(&dest_handle); });
 
 	u64 bytes_read = 0;
@@ -518,12 +796,12 @@ Result GuiMain::CopyFile(const char *srcPath, const char *destPath) {
 
 	do {
 		std::memset(buf, 0, buf_size);
-		if (R_FAILED(ret = fsFileRead(&src_handle, offset, buf, buf_size, FsReadOption_None, &bytes_read))) return ret;
-		if (R_FAILED(ret = fsFileWrite(&dest_handle, offset, buf, bytes_read, FsWriteOption_Flush))) return ret;
+		if (R_FAILED(rc = fsFileRead(&src_handle, offset, buf, buf_size, FsReadOption_None, &bytes_read))) return rc;
+		if (R_FAILED(rc = fsFileWrite(&dest_handle, offset, buf, bytes_read, FsWriteOption_Flush))) return rc;
 		offset += bytes_read;
 	} while(offset < size);
 
-	return ret;
+	return rc;
 }
 
 void GuiMain::update() {
@@ -566,9 +844,13 @@ void GuiMain::updateStatus(const SystemModule &module) {
 }
 
 bool GuiMain::hasFlag(const SystemModule &module) {
+    FsFileSystem fs;
+    if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return false;
+    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
+
     FsFile flagFile;
     std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
-    Result rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &flagFile);
+    Result rc = fsFsOpenFile(&fs, pathBuffer, FsOpenMode_Read, &flagFile);
     if (R_SUCCEEDED(rc)) {
         fsFileClose(&flagFile);
         return true;
@@ -585,6 +867,71 @@ bool GuiMain::isRunning(const SystemModule &module) {
 }
 
 Result GuiMain::isWifiOn(bool &isWifiOn) {
-    Result rc = nifmIsWirelessCommunicationEnabled(&isWifiOn);
+    Result rc;
+    if (R_FAILED(rc = nifmInitialize(NifmServiceType_Admin))) return rc;
+    rc = nifmIsWirelessCommunicationEnabled(&isWifiOn);
+    nifmExit();
     return rc;
 }
+
+#if 0
+Result GuiMain::setWLANCountryCode(std::string wlanCountCode)
+{
+	Result rc = 1;
+	FsStorage fs;
+	u32 calibrationDataSize = 0;
+	u8 oriHash[BodyHash_SIZE];
+	u8 newHash[BodyHash_SIZE];
+	u8 oriWlanCountCode[WlanCountryCode_SIZE] = {};
+	u8* buffer = nullptr;
+
+	if (R_SUCCEEDED(rc = fsOpenBisStorage(&fs, FsBisPartitionId_CalibrationBinary))) {
+		if (R_SUCCEEDED(rc = fsStorageRead(&fs, BodySize_OFFSET, &calibrationDataSize, sizeof(calibrationDataSize)))) {
+			if (R_SUCCEEDED(rc = fsStorageRead(&fs, BodyHash_OFFSET, oriHash, sizeof(oriHash)))) {
+                if (R_SUCCEEDED(rc = fsStorageRead(&fs, WlanCountryCodes_OFFSET, oriWlanCountCode, WlanCountryCode_SIZE))) {
+                    // 写之前要加密？
+                    if (R_SUCCEEDED(rc = fsStorageWrite(&fs, WlanCountryCodes_OFFSET, wlanCountCode.c_str(), WlanCountryCode_SIZE))) {
+                        buffer = new u8[calibrationDataSize];
+		                if (buffer) {
+                            if (R_SUCCEEDED(rc = fsStorageRead(&fs, BodyHashBeigin_OFFSET, buffer, calibrationDataSize))) {
+                                sha256CalculateHash(newHash, buffer, calibrationDataSize);
+                                if (R_FAILED(rc = fsStorageWrite(&fs, BodyHash_OFFSET, newHash, BodyHash_SIZE))) {
+                                    if (R_SUCCEEDED(rc = fsStorageRead(&fs, BodyHashBeigin_OFFSET, buffer, calibrationDataSize))) {
+                                        sha256CalculateHash(newHash, buffer, calibrationDataSize);
+                                        if (R_FAILED(rc = memcmp(oriHash, newHash, sizeof(oriHash)))) {
+                                            if (R_FAILED(rc = fsStorageWrite(&fs, WlanCountryCodes_OFFSET, oriWlanCountCode, WlanCountryCode_SIZE))) {
+                                                rc = fsStorageWrite(&fs, BodyHash_OFFSET, oriHash, BodyHash_SIZE);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            delete buffer;
+			                buffer = nullptr;
+                        }
+                    }
+                }
+			}
+		}
+        fsStorageClose(&fs);
+	}
+
+	return rc;
+}
+
+Result GuiMain::getWLANCountryCode(std::string &outWlanCountCode)
+{
+	Result rc = 1;
+    SetCalCountryCode wlanCountrycodes{};
+    s32 wlanCountryCodeTotalcounts = 0;
+    if (R_SUCCEEDED(rc = setcalInitialize())) {
+        if (R_SUCCEEDED(rc = setcalGetWirelessLanCountryCodes(&wlanCountryCodeTotalcounts, &wlanCountrycodes, 1))) {
+            outWlanCountCode = wlanCountrycodes.code;
+        } else {
+            outWlanCountCode = "";
+        }
+        setcalExit();
+    }
+	return rc;
+}
+#endif

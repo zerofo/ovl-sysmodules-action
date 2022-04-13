@@ -1,6 +1,10 @@
 {
     "strings": [
         {
+            "key": "PluginName",
+            "value": "ovl-sysmodules"
+        },
+        {
             "key": "OverlayFrameText",
             "value": "Sysmodules"
         },
@@ -171,6 +175,30 @@
         {
             "key": "VersionSwitchSetRegionCodeNOKListItemValue",
             "value": "setsysSetRegionCode failed, Error code: "
+        },
+        {
+            "key": "WlanCountryCodeSwitchCategoryHeaderText",
+            "value": "Mainland and Japen WLan country code switching  |  \uE0E2 Mainland  \uE0E3 Japan"
+        },
+        {
+            "key": "WlanCountryCodeSwitchCustomDrawerText",
+            "value": "\uE016  Suggest to backup the PRODINFO. Takes effect after restarted."
+        },
+        {
+            "key": "WlanCountryCodeSwitchListItemKey",
+            "value": "Current WLan Country Code"
+        },
+        {
+            "key": "WlanCountryCodeSwitchMainlandListItemValue",
+            "value": "Mainland"
+        },
+        {
+            "key": "WlanCountryCodeSwitchJapanListItemValue",
+            "value": "Japan"
+        },
+        {
+            "key": "WlanCountryCodeSwitchSetTNOKListItemValue",
+            "value": "setWLANCountryCode failed! Error Code: "
         }
     ]
 }

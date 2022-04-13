@@ -36,7 +36,15 @@ class GuiMain : public tsl::Gui {
     Result CopyFile(const char *srcPath, const char *destPath);
     Result setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption = true);
     Result isWifiOn(bool &isWifiOn);
+  #if 0
+    Result setWLANCountryCode(std::string wlanCountCode);
+    Result getWLANCountryCode(std::string &outWlanCountCode);
+  #endif
+
     BootDatType m_bootRunning;
     bool m_isTencentVersion;
+  #if 0
+    std::string m_curCountryCode;
+  #endif
     //s64 m_bootSize;
 };
