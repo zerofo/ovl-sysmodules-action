@@ -310,9 +310,11 @@ GuiMain::GuiMain() {
         }
     )";
     std::string lanPath = std::string("sdmc:/switch/.overlays/lang/") + APPTITLE + "/";
+    fsdevMountSdmc();
     tsl::hlp::doWithSmSession([&lanPath, &jsonStr]{
         tsl::tr::InitTrans(lanPath, jsonStr);
     });
+    fsdevUnmountDevice("sdmc");
 
     // Open a service manager session.
     if (R_FAILED(rc = smInitialize())) return;
