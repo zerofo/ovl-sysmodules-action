@@ -114,15 +114,23 @@
         },
         {
             "key": "BootFileSXOSBootCopyNOKListItemText",
-            "value": "Select SXOS Boot.dat failed! Error code: "
+            "value": "Select SXOS boot.dat failed! Error code: "
         },
         {
             "key": "BootFileSXGEARBootCopyNOKListItemText",
-            "value": "Select SXGEAR Boot.dat failed! Error code: "
+            "value": "Select SXGEAR boot.dat failed! Error code: "
         },
         {
             "key": "HekateRestartHitCategoryHeaderText",
             "value": "Update hekate setting  |  \uE0E0 Toggle"
+        },
+        {
+            "key": "BootFileSXOSBootSourceFileNotFoundListItemText",
+            "value": "Select SXOS boot.dat failed! Boot file not exist!"
+        },
+        {
+            "key": "BootFileSXGEARBootSourceFileNotFoundListItemText",
+            "value": "Select SXGEAR boot.dat failed! Boot file not exist!"
         },
         {
             "key": "HekateRestartHitCustomDrawerText",

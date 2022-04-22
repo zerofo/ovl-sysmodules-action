@@ -106,11 +106,19 @@
         },
         {
             "key": "BootFileSXOSBootCopyNOKListItemText",
-            "value": "切換SXOS Boot.dat失敗！錯誤碼："
+            "value": "切換SXOS boot.dat失敗！錯誤碼："
         },
         {
             "key": "BootFileSXGEARBootCopyNOKListItemText",
-            "value": "切換SXGEAR Boot.dat失敗！錯誤碼："
+            "value": "切換SXGEAR boot.dat失敗！錯誤碼："
+        },
+        {
+            "key": "BootFileSXOSBootSourceFileNotFoundListItemText",
+            "value": "切換SXOS boot.dat失敗！啟動文件不存在！"
+        },
+        {
+            "key": "BootFileSXGEARBootSourceFileNotFoundListItemText",
+            "value": "切換SXGEAR boot.dat失敗！啟動文件不存在！"
         },
         {
             "key": "HekateRestartHitCategoryHeaderText",

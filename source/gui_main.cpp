@@ -319,27 +319,31 @@ GuiMain::GuiMain() {
     // Open a service manager session.
     if (R_FAILED(rc = smInitialize())) return;
 
-    /* Attempt to get the exosphere version. */
-    if (R_FAILED(rc = splInitialize())) return;
-    u64 version{0};
-    u32 version_micro{0xff};
-    u32 version_minor{0xff};
-    u32 version_major{0xff};
-    if (R_SUCCEEDED(rc = splGetConfig(static_cast<SplConfigItem>(AMSVersionConfigItem), &version))) {
-        version_micro = (version >> 40) & 0xff;
-        version_minor = (version >> 48) & 0xff;
-        version_major = (version >> 56) & 0xff;
-    }
-    splExit();
+    if (R_FAILED(rc = nifmInitialize(NifmServiceType_Admin))) return;
 
-    if (version_major == 0 && version_minor == 0 && version_micro == 0) {
+    if (R_FAILED(rc = fsOpenSdCardFileSystem(&this->m_fs))) return;
+
+    /* Attempt to get the exosphere version. */
+    if (R_SUCCEEDED(rc = splInitialize())) {
+        u64 version{0};
+        u32 version_micro{0xff};
+        u32 version_minor{0xff};
+        u32 version_major{0xff};
+        if (R_SUCCEEDED(rc = splGetConfig(static_cast<SplConfigItem>(AMSVersionConfigItem), &version))) {
+            version_micro = (version >> 40) & 0xff;
+            version_minor = (version >> 48) & 0xff;
+            version_major = (version >> 56) & 0xff;
+        }
+        splExit();
+        if (version_major == 0 && version_minor == 0 && version_micro == 0) {
         this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
         std::strcpy(pathBuffer, sxosTitlesPath);
-    } else if ((version_major == 0 && version_minor >= 9 && version_micro >= 0) || (version_major == 1 && version_minor >= 0 && version_micro >= 0)) {
-        this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
-        std::strcpy(pathBuffer, amsContentsPath);
-    } else {
-        return;
+        } else if ((version_major == 0 && version_minor >= 9 && version_micro >= 0) || (version_major == 1 && version_minor >= 0 && version_micro >= 0)) {
+            this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
+            std::strcpy(pathBuffer, amsContentsPath);
+        } else {
+            return;
+        }
     }
 
     this->m_isTencentVersion = false;
@@ -353,14 +357,10 @@ GuiMain::GuiMain() {
     if (R_FAILED(rc = getWLANCountryCode(this->m_curCountryCode))) return;
 #endif
 
-    FsFileSystem fs;
-    if (R_FAILED(rc = fsOpenSdCardFileSystem(&fs))) return;
-    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
-
 #if 0
     this->m_bootSize = 0;
 	FsFile bootHandle;
-	if (R_FAILED(fsFsOpenFile(&fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle))) return;
+	if (R_FAILED(fsFsOpenFile(&this->m_fs, bootFileSrcPath[2], FsOpenMode_Read, &bootHandle))) return;
     tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&bootHandle); });
     if (R_FAILED(fsFileGetSize(&bootHandle, &m_bootSize))) return;
     if (this->m_bootSize < SXOS_MIN_BOOT_SIZE) {
@@ -373,7 +373,7 @@ GuiMain::GuiMain() {
 #endif
 
     FsDir contentDir;
-    if (R_FAILED(rc = fsFsOpenDirectory(&fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir)))
+    if (R_FAILED(rc = fsFsOpenDirectory(&this->m_fs, pathBuffer, FsDirOpenMode_ReadDirs, &contentDir)))
         return;
 
     tsl::hlp::ScopeGuard dirGuard([&] { fsDirClose(&contentDir); });
@@ -386,7 +386,7 @@ GuiMain::GuiMain() {
     for (const auto &entry : FsDirIterator(contentDir)) {
         FsFile toolboxFile;
         std::snprintf(pathBuffer, FS_MAX_PATH, toolboxJsonFormat.c_str(), entry.name);
-        if (R_FAILED(rc = fsFsOpenFile(&fs, pathBuffer, FsOpenMode_Read, &toolboxFile)))
+        if (R_FAILED(rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &toolboxFile)))
             continue;
         tsl::hlp::ScopeGuard fileGuard([&] { fsFileClose(&toolboxFile); });
     
@@ -435,20 +435,17 @@ GuiMain::GuiMain() {
             }
 
             if (click & HidNpadButton_Y) {
-                FsFileSystem fs;
-                if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return false;
                 /* if the folder "flags" does not exist, it will be created */
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFolder.c_str(), module.programId);
-                fsFsCreateDirectory(&fs, pathBuffer);
+                fsFsCreateDirectory(&this->m_fs, pathBuffer);
                 std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
                 if (this->hasFlag(module)) {
                     /* Remove boot2 flag file. */
-                    fsFsDeleteFile(&fs, pathBuffer);
+                    fsFsDeleteFile(&this->m_fs, pathBuffer);
                 } else {
                     /* Create boot2 flag file. */
-                    fsFsCreateFile(&fs, pathBuffer, 0, FsCreateOption(0));
+                    fsFsCreateFile(&this->m_fs, pathBuffer, 0, FsCreateOption(0));
                 }
-                fsFsClose(&fs);
                 return true;
             }
 
@@ -460,7 +457,8 @@ GuiMain::GuiMain() {
 }
 
 GuiMain::~GuiMain() {
-    // Close the service manager session.
+    fsFsClose(&this->m_fs);
+    nifmExit();
     smExit();
 }
 
@@ -517,10 +515,8 @@ tsl::elm::Element *GuiMain::createUI() {
             if (R_FAILED(rc = this->isWifiOn(isWifiOn)))
                 wifiSwitchCatHeader->setText("WifiSwitchStatusCheckErrorListItemText"_tr + std::to_string(rc));
             else {
-                if (R_FAILED(rc = nifmInitialize(NifmServiceType_Admin))) return false;
                 if (R_FAILED(rc = nifmSetWirelessCommunicationEnabled(!isWifiOn))) {
                     wifiSwitchCatHeader->setText("WifiSwitchSetErrorListItemext"_tr + std::to_string(rc));
-                    nifmExit();
                 }
             }
             if (R_FAILED(rc))
@@ -567,13 +563,17 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_listItemSXOSBootType->setClickListener([this, bootCatHeader](u64 click) -> bool {
         if (click & HidNpadButton_A) {
             if (this->m_bootRunning == BootDatType::SXOS_BOOT_TYPE) return true;
-            this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
             Result rc;
             rc = this->CopyFile(bootFileSrcPath[0], bootFileSrcPath[2]);
             if (R_FAILED(rc)) {
-                bootCatHeader->setText("BootFileSXOSBootCopyNOKListItemText"_tr + std::to_string(rc));
+                if (rc == 514) {
+                    bootCatHeader->setText("BootFileSXOSBootSourceFileNotFoundListItemText"_tr);
+                } else {
+                    bootCatHeader->setText("BootFileSXOSBootCopyNOKListItemText"_tr + std::to_string(rc));
+                }
                 return false;
             }
+            this->m_bootRunning = BootDatType::SXOS_BOOT_TYPE;
             return true;
         }
         return false;
@@ -583,13 +583,17 @@ tsl::elm::Element *GuiMain::createUI() {
     this->m_listItemSXGEARBootType->setClickListener([this, bootCatHeader](u64 click) -> bool {
         if (click & HidNpadButton_A) {
             if (this->m_bootRunning == BootDatType::SXGEAR_BOOT_TYPE) return true;
-            this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
             Result rc;
             rc = CopyFile(bootFileSrcPath[1], bootFileSrcPath[2]);
             if (R_FAILED(rc)) {
-                bootCatHeader->setText("BootFileSXGEARBootCopyNOKListItemText"_tr + std::to_string(rc));
+                if (rc == 514) {
+                    bootCatHeader->setText("BootFileSXGEARBootSourceFileNotFoundListItemText"_tr);
+                } else {
+                    bootCatHeader->setText("BootFileSXGEARBootCopyNOKListItemText"_tr + std::to_string(rc));
+                }
                 return false;
             }
+            this->m_bootRunning = BootDatType::SXGEAR_BOOT_TYPE;
             return true;
         }
         return false;
@@ -746,64 +750,57 @@ tsl::elm::Element *GuiMain::createUI() {
 }
 
 Result GuiMain::setGetIniConfig(std::string iniPath, std::string iniSection, std::string iniOption, std::string &iniValue, bool getOption) {
-    FsFileSystem fs;
-    if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return 1;
-    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
-
-    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(&fs, iniPath);
-    if (!ini) return 2;
+    simpleIniParser::Ini *ini = simpleIniParser::Ini::parseFile(&this->m_fs, iniPath);
+    if (!ini) return 1;
     simpleIniParser::IniSection *section = ini->findSection(iniSection);
-    if (!section) return 3;
+    if (!section) return 2;
     simpleIniParser::IniOption *option = section->findFirstOption(iniOption);
-    if (!option) return 4;
+    if (!option) return 3;
 
     if (getOption) {
         iniValue = option->value;
     } else {
         option->value = iniValue;
-        if (!(ini->writeToFile(&fs, iniPath))) return 4;
+        if (!(ini->writeToFile(&this->m_fs, iniPath))) return 4;
     }
 
     return 0;
 }
 
 Result GuiMain::CopyFile(const char *srcPath, const char *destPath) {
-	Result rc{0};
-    FsFileSystem fs;
-    if (R_FAILED(rc = fsOpenSdCardFileSystem(&fs))) return rc;
-    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
+    Result ret{0};
 
     FsFile src_handle, dest_handle;
-	if (R_FAILED(rc = fsFsOpenFile(&fs, srcPath, FsOpenMode_Read, &src_handle))) return rc;
+    if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, srcPath, FsOpenMode_Read, &src_handle))) return ret;
     tsl::hlp::ScopeGuard fileGuard1([&] { fsFileClose(&src_handle); });
 
-	s64 size = 0;
-	if (R_FAILED(rc = fsFileGetSize(&src_handle, &size))) return rc;
+    s64 size = 0;
+    if (R_FAILED(ret = fsFileGetSize(&src_handle, &size))) return ret;
 
-    if (R_SUCCEEDED(fsFsOpenFile(&fs, destPath, FsOpenMode_Read, &dest_handle))) {
+    if (R_SUCCEEDED(fsFsOpenFile(&this->m_fs, destPath, FsOpenMode_Read, &dest_handle))) {
         fsFileClose(&dest_handle);
-        if (R_FAILED(rc = fsFsDeleteFile(&fs, destPath))) return rc;
-	    if (R_FAILED(rc = fsFsCreateFile(&fs, destPath, size, 0))) return rc;
+        if (R_FAILED(ret = fsFsDeleteFile(&this->m_fs, destPath))) return ret;
+	    if (R_FAILED(ret = fsFsCreateFile(&this->m_fs, destPath, size, 0))) return ret;
     }
 
-	if (R_FAILED(rc = fsFsOpenFile(&fs, destPath, FsOpenMode_Write, &dest_handle))) return rc;
+    if (R_FAILED(ret = fsFsOpenFile(&this->m_fs, destPath, FsOpenMode_Write, &dest_handle))) return ret;
     tsl::hlp::ScopeGuard fileGuard2([&] { fsFileClose(&dest_handle); });
 
-	u64 bytes_read = 0;
-	const u64 buf_size = 0x10000;
-	s64 offset = 0;
-	unsigned char *buf = new unsigned char[buf_size];
+    u64 bytes_read = 0;
+    const u64 buf_size = 0x10000;
+    s64 offset = 0;
+    unsigned char *buf = new unsigned char[buf_size];
     tsl::hlp::ScopeGuard fileGuard3([&] { delete[] buf; });
-	std::string filename = std::filesystem::path(srcPath).filename();
+    std::string filename = std::filesystem::path(srcPath).filename();
 
-	do {
-		std::memset(buf, 0, buf_size);
-		if (R_FAILED(rc = fsFileRead(&src_handle, offset, buf, buf_size, FsReadOption_None, &bytes_read))) return rc;
-		if (R_FAILED(rc = fsFileWrite(&dest_handle, offset, buf, bytes_read, FsWriteOption_Flush))) return rc;
-		offset += bytes_read;
-	} while(offset < size);
+    do {
+        std::memset(buf, 0, buf_size);
+        if (R_FAILED(ret = fsFileRead(&src_handle, offset, buf, buf_size, FsReadOption_None, &bytes_read))) return ret;
+        if (R_FAILED(ret = fsFileWrite(&dest_handle, offset, buf, bytes_read, FsWriteOption_Flush))) return ret;
+        offset += bytes_read;
+    } while(offset < size);
 
-	return rc;
+    return ret;
 }
 
 void GuiMain::update() {
@@ -846,13 +843,9 @@ void GuiMain::updateStatus(const SystemModule &module) {
 }
 
 bool GuiMain::hasFlag(const SystemModule &module) {
-    FsFileSystem fs;
-    if (R_FAILED(fsOpenSdCardFileSystem(&fs))) return false;
-    tsl::hlp::ScopeGuard fsGuard([&] { fsFsClose(&fs); });
-
     FsFile flagFile;
     std::snprintf(pathBuffer, FS_MAX_PATH, boot2FlagFormat.c_str(), module.programId);
-    Result rc = fsFsOpenFile(&fs, pathBuffer, FsOpenMode_Read, &flagFile);
+    Result rc = fsFsOpenFile(&this->m_fs, pathBuffer, FsOpenMode_Read, &flagFile);
     if (R_SUCCEEDED(rc)) {
         fsFileClose(&flagFile);
         return true;
@@ -869,11 +862,7 @@ bool GuiMain::isRunning(const SystemModule &module) {
 }
 
 Result GuiMain::isWifiOn(bool &isWifiOn) {
-    Result rc;
-    if (R_FAILED(rc = nifmInitialize(NifmServiceType_Admin))) return rc;
-    rc = nifmIsWirelessCommunicationEnabled(&isWifiOn);
-    nifmExit();
-    return rc;
+    return nifmIsWirelessCommunicationEnabled(&isWifiOn);
 }
 
 #if 0
