@@ -174,8 +174,10 @@ $(BUILD):
 	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
 	@rm -rf $(CURDIR)/SdOut
 	@mkdir -p $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)
+	@mkdir -p $(CURDIR)/SdOut/config/$(APP_TITLE)
 	@cp -r $(TARGET).ovl $(CURDIR)/SdOut/switch/.overlays/
 	@cp -r $(CURDIR)/lang/* $(CURDIR)/SdOut/switch/.overlays/lang/$(APP_TITLE)/
+	@echo "[$(APP_TITLE)]\npowerControlEnabled=1\nwifiControlEnabled=1\nsysmodulesControlEnabled=1\nbootFileControlEnabled=1\nhekateRestartControlEnabled=1\nconsoleRegionControlEnabled=1" > $(CURDIR)/SdOut/config/$(APP_TITLE)/config.ini
 
 #---------------------------------------------------------------------------------
 clean:

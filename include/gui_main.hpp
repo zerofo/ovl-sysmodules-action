@@ -13,6 +13,18 @@ enum class BootDatType {
     SXGEAR_BOOT_TYPE
 };
 
+struct SystemModuleEnabledFlag {
+    int powerControlEnabled;
+    int wifiControlEnabled;
+    int sysmodulesControlEnabled;
+    int bootFileControlEnabled;
+    int hekateRestartControlEnabled;
+    int consoleRegionControlEnabled;
+#if 0
+    int wlanCountryCodeControlEnabled;
+#endif
+};
+
 class GuiMain : public tsl::Gui {
   private:
     FsFileSystem m_fs;
@@ -41,10 +53,10 @@ class GuiMain : public tsl::Gui {
     Result getWLANCountryCode(std::string &outWlanCountCode);
   #endif
 
+    SystemModuleEnabledFlag m_sysmodEnabledFlags;
     BootDatType m_bootRunning;
     bool m_isTencentVersion;
   #if 0
     std::string m_curCountryCode;
   #endif
-    //s64 m_bootSize;
 };
