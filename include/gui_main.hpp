@@ -8,11 +8,16 @@ struct SystemModule {
     u64 programId;
     bool needReboot;
 };
-
+enum class BootDatType {
+    SXOS_BOOT_TYPE,
+    SXGEAR_BOOT_TYPE
+};
 class GuiMain : public tsl::Gui {
   private:
     FsFileSystem m_fs;
     std::list<SystemModule> m_sysmoduleListItems;
+    tsl::elm::ListItem *m_listItemSXOSBootType;
+    tsl::elm::ListItem *m_listItemSXGEARBootType;
     bool m_scanned;
 
   public:
@@ -26,6 +31,6 @@ class GuiMain : public tsl::Gui {
     void updateStatus(const SystemModule &module);
     bool hasFlag(const SystemModule &module);
     bool isRunning(const SystemModule &module);
-    Result GuiMain::CopyFile(const char *srcPath, const char *destPath);
+    Result CopyFile(const char *srcPath, const char *destPath);
     BootDatType m_bootRunning;
 };

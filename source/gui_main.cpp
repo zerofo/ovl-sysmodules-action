@@ -4,11 +4,14 @@
 
 #include <json.hpp>
 using json = nlohmann::json;
-
+constexpr const char *const bootFiledescriptions[2] = {
+        [0] = "SXOS boot.dat",
+        [1] = "SXGEAR boot.dat"
+};
 constexpr const char *const amsContentsPath = "/atmosphere/contents";
 constexpr const char *const boot2FlagFormat = "/atmosphere/contents/%016lX/flags/boot2.flag";
 constexpr const char *const boot2FlagFolder = "/atmosphere/contents/%016lX/flags";
-
+constexpr const char *const sxosTitlesPath = "/sxos/titles";
 static char pathBuffer[FS_MAX_PATH];
 
 constexpr const char *const descriptions[2][2] = {
