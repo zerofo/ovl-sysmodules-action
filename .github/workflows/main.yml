@@ -24,3 +24,12 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         path: ovlSysmodules.ovl
+        
+    - name: Upload binaries to release
+      uses: svenstaro/upload-release-action@v2
+      with:
+        repo_token: ${{ secrets.release_token }}
+        file: ./ovlSysmodules.ovl
+        tag: ${{ github.ref }}
+        overwrite: true
+        file_glob: true
