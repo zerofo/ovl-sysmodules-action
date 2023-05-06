@@ -26,5 +26,6 @@ class GuiMain : public tsl::Gui {
     void updateStatus(const SystemModule &module);
     bool hasFlag(const SystemModule &module);
     bool isRunning(const SystemModule &module);
-    Result GuiMain::CopyFile(const char *srcPath, const char *destPath) 
+    Result GuiMain::CopyFile(const char *srcPath, const char *destPath);
+    BootDatType m_bootRunning;
 };
