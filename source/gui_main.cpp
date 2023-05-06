@@ -21,7 +21,7 @@ constexpr const char *const descriptions[2][2] = {
         [1] = "On | \uE0F4",
     },
 };
-
+static constexpr u32 AMSVersionConfigItem = 65000;
 GuiMain::GuiMain() {
     Result rc = fsOpenSdCardFileSystem(&this->m_fs);
     if (R_FAILED(rc))
