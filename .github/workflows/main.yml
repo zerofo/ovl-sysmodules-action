@@ -19,7 +19,7 @@ jobs:
 
     - name: Build project
       run: |
-          git config --global --add safe.directory && \
+          git config --global --add safe.directory `pwd` && \
           git submodule update --remote && make -j2
 
     - name: Upload artifacts
@@ -35,3 +35,4 @@ jobs:
         tag: ${{ github.ref }}
         overwrite: true
         file_glob: true
+        make_latest: true 
