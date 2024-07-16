@@ -18,10 +18,10 @@ jobs:
         submodules: recursive
 
     - name: Build project
-      run: make
+      run: git submodule update --remote && make -j2
 
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         path: ovlSysmodules.ovl
         
