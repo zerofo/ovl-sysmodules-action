@@ -163,12 +163,12 @@ tsl::elm::Element *GuiMain::createUI() {
         powerResetListItem->setValue("|  \uE0F4");
         powerResetListItem->setClickListener([this, powerResetListItem](u64 click) -> bool {
             if (click & HidNpadButton_A) {
-                Result rc,rc1;
-                // if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcRebootSystem()))
-                if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc1 = spsmShutdown(true)))
-                    powerResetListItem->setText("failed! code:" + std::to_string(rc) + " , " + std::to_string(rc1));
-                spsmExit();
-                //bpcExit();
+                Result rc;
+                if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcRebootSystem()))
+                // if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc1 = spsmShutdown(true)))
+                    powerResetListItem->setText("failed! code:" + std::to_string(rc));
+                // spsmExit();
+                bpcExit();
                 return true;
             }
             return false;
@@ -178,12 +178,12 @@ tsl::elm::Element *GuiMain::createUI() {
         powerOffListItem->setValue("|  \uE098");
         powerOffListItem->setClickListener([this, powerOffListItem](u64 click) -> bool {
             if (click & HidNpadButton_A) {
-                Result rc,rc1;
-                // if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcShutdownSystem()))
-                if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc1 = spsmShutdown(false)))
-                    powerOffListItem->setText("failed! code:" + std::to_string(rc) + " , " + std::to_string(rc1));
-                spsmExit();
-                //bpcExit();
+                Result rc;
+                if (R_FAILED(rc = bpcInitialize()) || R_FAILED(rc = bpcShutdownSystem()))
+                // if (R_FAILED(rc = spsmInitialize()) || R_FAILED(rc1 = spsmShutdown(false)))
+                    powerOffListItem->setText("failed! code:" + std::to_string(rc));
+                // spsmExit();
+                bpcExit();
                 return true;
             }
             return false;
